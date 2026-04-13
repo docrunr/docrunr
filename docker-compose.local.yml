@@ -1,0 +1,9 @@
+# Local storage: bind-mount repo ./.data to worker /data (STORAGE_TYPE=local in .env).
+
+services:
+  worker:
+    environment:
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/data}
+    volumes:
+      - ./.data:/data

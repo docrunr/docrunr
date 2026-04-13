@@ -1,0 +1,35 @@
+Content-Type: multipart/alternative; boundary="===============7299764730193282882=="
+MIME-Version: 1.0
+Subject: Test: Multipart Alternative
+From: zender@rijksoverheid.nl
+To: ontvanger@rijksoverheid.nl
+Date: Fri, 16 Jan 2026 17:05:29 +0100
+
+--===============7299764730193282882==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+QmVzdGUgY29sbGVnYSwKCkRpdCBpcyBkZSBwbGF0dGUgdGVrc3QgdmVyc2llIHZhbiBkZXplIGUt
+bWFpbC4KClRhYWwgZGllbmVuIHdlc3QgaG9vZyBvbnplLiBBZmdlbG9wZW4gd2luZCBzb29ydCB6
+b25uaWcgb3ZlcmVlbmtvbWVuIGNvbXB1dGVyIHJla2VubWFjaGluZS4gQmVlciBidXJlYXUgZ3Jv
+ZWllbiBib2RlbS4gU2NoYWFyIHVpdHZpbmRlbiBkcmlua2VuIGdldmFhciBkcmllIHZyaWVuZC4K
+Ck1ldCB2cmllbmRlbGlqa2UgZ3JvZXQsCkpvc2h1YSBkJyBIZXJpcG9uCg==
+
+--===============7299764730193282882==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+PGh0bWw+CjxoZWFkPjxzdHlsZT5ib2R5IHsgZm9udC1mYW1pbHk6IEFyaWFsOyB9IC5oaWdobGln
+aHQgeyBiYWNrZ3JvdW5kOiB5ZWxsb3c7IH08L3N0eWxlPjwvaGVhZD4KPGJvZHk+CjxwPkJlc3Rl
+IGNvbGxlZ2EsPC9wPgo8cD5EaXQgaXMgZGUgPHN0cm9uZz5IVE1MIHZlcnNpZTwvc3Ryb25nPiB2
+YW4gZGV6ZSBlLW1haWwgbWV0IDxzcGFuIGNsYXNzPSJoaWdobGlnaHQiPm9wbWFhazwvc3Bhbj4u
+PC9wPgo8cD5TY2hlcnAgbWFhbHRpamQga2FhcyBob29mZCB2dXVyIG1hYW5kLiBCYWJ5IG5vYmVs
+IGJlZXIgdmVyc3ByZWlkZW4uPC9wPgo8dGFibGUgYm9yZGVyPSIxIj4KPHRyPjx0aD5JdGVtPC90
+aD48dGg+U3RhdHVzPC90aD48L3RyPgo8dHI+PHRkPlRhYWsgMTwvdGQ+PHRkPkdlcmVlZDwvdGQ+
+PC90cj4KPHRyPjx0ZD5UYWFrIDI8L3RkPjx0ZD5JbiBiZWhhbmRlbGluZzwvdGQ+PC90cj4KPC90
+YWJsZT4KPHA+TWV0IHZyaWVuZGVsaWprZSBncm9ldCw8YnI+QW1pciBWaW5rLUJyZXVnZWxlbnNp
+czwvcD4KPC9ib2R5Pgo8L2h0bWw+
+
+--===============7299764730193282882==--

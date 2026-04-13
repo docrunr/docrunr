@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<employeeData xmlns="http://rijksoverheid.nl/schemas/employees"
+              exportDate="2026-01-16T17:05:27.961151"
+              organization="Rijksoverheid">
+    <metadata>
+        <totalRecords>10</totalRecords>
+        <exportedBy>Mart Scardino</exportedBy>
+        <department>Human Resources</department>
+    </metadata>
+    <employees>
+    <employee id="1">
+        <name>Livia Manne</name>
+        <department>HR</department>
+        <position>Engineer, manufacturing</position>
+        <email>passchierschloe@example.org</email>
+        <startDate>2021-11-30</startDate>
+        <salary currency="EUR">3282</salary>
+    </employee>
+    <employee id="2">
+        <name>Loes Broeckx</name>
+        <department>Communicatie</department>
+        <position>Race relations officer</position>
+        <email>westerbeekkyra@example.net</email>
+        <startDate>2024-01-27</startDate>
+        <salary currency="EUR">4770</salary>
+    </employee>
+    <employee id="3">
+        <name>Lot Zuijdveld</name>
+        <department>Beleid</department>
+        <position>Bookseller</position>
+        <email>van-dommelenmaud@example.org</email>
+        <startDate>2022-06-26</startDate>
+        <salary currency="EUR">3391</salary>
+    </employee>
+    <employee id="4">
+        <name>Naud Demmendaal</name>
+        <department>Communicatie</department>
+        <position>Counselling psychologist</position>
+        <email>csmit@example.net</email>
+        <startDate>2024-11-15</startDate>
+        <salary currency="EUR">3842</salary>
+    </employee>
+    <employee id="5">
+        <name>Bastiaan van Heusden</name>
+        <department>Beleid</department>
+        <position>Engineer, aeronautical</position>
+        <email>de-bruineline@example.net</email>
+        <startDate>2021-05-20</startDate>
+        <salary currency="EUR">5525</salary>
+    </employee>
+    <employee id="6">
+        <name>Beau Schelvis</name>
+        <department>Beleid</department>
+        <position>Interior and spatial designer</position>
+        <email>catovan-formbach@example.net</email>
+        <startDate>2023-07-10</startDate>
+        <salary currency="EUR">3429</salary>
+    </employee>
+    <employee id="7">
+        <name>Dana van de Elzas</name>
+        <department>Communicatie</department>
+        <position>Technical author</position>
+        <email>aidenlevesque@example.net</email>
+        <startDate>2021-09-25</startDate>
+        <salary currency="EUR">3038</salary>
+    </employee>
+    <employee id="8">
+        <name>Daphne Ehlert</name>
+        <department>ICT</department>
+        <position>Retail buyer</position>
+        <email>boaz56@example.org</email>
+        <startDate>2023-05-20</startDate>
+        <salary currency="EUR">6091</salary>
+    </employee>
+    <employee id="9">
+        <name>Riley Haack-Gerrits</name>
+        <department>HR</department>
+        <position>Dealer</position>
+        <email>qchrodtrud@example.net</email>
+        <startDate>2024-05-29</startDate>
+        <salary currency="EUR">5045</salary>
+    </employee>
+    <employee id="10">
+        <name>Ninthe van der Flaas</name>
+        <department>Financiën</department>
+        <position>Tax adviser</position>
+        <email>qverbeek@example.net</email>
+        <startDate>2025-08-27</startDate>
+        <salary currency="EUR">4954</salary>
+    </employee>
+    </employees>
+</employeeData>

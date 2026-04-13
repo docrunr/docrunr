@@ -1,0 +1,299 @@
+/* Viewer shell: Mantine surfaces + scroll + Prism-friendly code blocks */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  min-height: 0;
+  min-width: 0;
+}
+
+.body {
+  min-height: 0;
+  min-width: 0;
+}
+
+.scrollSurface {
+  max-height: min(70vh, 560px);
+  min-height: 200px;
+  overflow: auto;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+}
+
+/*
+ * Prism injects .token-* spans; theme CSS was loaded async and often missed the first highlight pass.
+ * Scope colors under .scrollSurface so they apply to JSON, markdown Preview fences, and Raw — using Mantine palette tokens.
+ */
+.scrollSurface :global(code[class*='language-']),
+.scrollSurface :global(pre[class*='language-']) {
+  color: light-dark(var(--mantine-color-dark-7), var(--mantine-color-gray-2));
+  background: transparent;
+  text-shadow: none;
+  font-family: var(--mantine-font-family-monospace);
+  tab-size: 4;
+}
+
+.scrollSurface :global(.token.comment),
+.scrollSurface :global(.token.prolog),
+.scrollSurface :global(.token.doctype),
+.scrollSurface :global(.token.cdata) {
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-5));
+  font-style: italic;
+}
+
+.scrollSurface :global(.token.punctuation) {
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-4));
+}
+
+.scrollSurface :global(.token.namespace) {
+  opacity: 0.85;
+}
+
+/* JSON + general code */
+.scrollSurface :global(.token.property) {
+  color: light-dark(var(--mantine-color-blue-9), var(--mantine-color-blue-3));
+}
+
+.scrollSurface :global(.token.string),
+.scrollSurface :global(.token.char),
+.scrollSurface :global(.token.attr-value),
+.scrollSurface :global(.token.inserted) {
+  color: light-dark(var(--mantine-color-teal-9), var(--mantine-color-teal-3));
+}
+
+.scrollSurface :global(.token.number) {
+  color: light-dark(var(--mantine-color-orange-8), var(--mantine-color-orange-4));
+}
+
+.scrollSurface :global(.token.boolean) {
+  color: light-dark(var(--mantine-color-violet-8), var(--mantine-color-violet-3));
+}
+
+.scrollSurface :global(.token.keyword),
+.scrollSurface :global(.token.constant),
+.scrollSurface :global(.token.symbol) {
+  color: light-dark(var(--mantine-color-grape-8), var(--mantine-color-grape-3));
+}
+
+.scrollSurface :global(.token.operator),
+.scrollSurface :global(.token.entity),
+.scrollSurface :global(.token.url) {
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-4));
+}
+
+.scrollSurface :global(.token.tag),
+.scrollSurface :global(.token.selector) {
+  color: light-dark(var(--mantine-color-cyan-9), var(--mantine-color-cyan-3));
+}
+
+.scrollSurface :global(.token.attr-name) {
+  color: light-dark(var(--mantine-color-blue-8), var(--mantine-color-blue-4));
+}
+
+.scrollSurface :global(.token.function),
+.scrollSurface :global(.token.class-name) {
+  color: light-dark(var(--mantine-color-indigo-8), var(--mantine-color-indigo-3));
+}
+
+.scrollSurface :global(.token.regex),
+.scrollSurface :global(.token.important) {
+  color: light-dark(var(--mantine-color-red-8), var(--mantine-color-red-4));
+}
+
+.scrollSurface :global(.token.variable),
+.scrollSurface :global(.token.parameter) {
+  color: light-dark(var(--mantine-color-dark-6), var(--mantine-color-gray-3));
+}
+
+.scrollSurface :global(.token.bold) {
+  font-weight: 700;
+}
+
+.scrollSurface :global(.token.italic) {
+  font-style: italic;
+}
+
+/* Preview prose (sanitized markdown) */
+.prose {
+  padding: var(--mantine-spacing-md);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.65;
+  color: inherit;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.prose :global(h1),
+.prose :global(h2),
+.prose :global(h3),
+.prose :global(h4) {
+  margin-top: 1.1em;
+  margin-bottom: 0.45em;
+  font-weight: 600;
+  line-height: 1.25;
+  color: inherit;
+}
+
+.prose :global(h1) {
+  font-size: 1.35rem;
+}
+.prose :global(h2) {
+  font-size: 1.2rem;
+}
+.prose :global(h3) {
+  font-size: 1.05rem;
+}
+
+.prose :global(p) {
+  margin: 0.55em 0;
+}
+
+.prose :global(ul),
+.prose :global(ol) {
+  margin: 0.55em 0;
+  padding-left: 1.35em;
+}
+
+.prose :global(li) {
+  margin: 0.25em 0;
+}
+
+.prose :global(blockquote) {
+  margin: 0.75em 0;
+  padding: 0.35em 0 0.35em 0.85em;
+  border-left: 3px solid light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+  opacity: 0.92;
+}
+
+.prose :global(a) {
+  color: var(--mantine-color-blue-filled);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose :global(hr) {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.prose :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mantine-font-size-xs);
+  margin: 0.75em 0;
+}
+
+.prose :global(th),
+.prose :global(td) {
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  padding: 0.35em 0.5em;
+  text-align: left;
+}
+
+.prose :global(pre) {
+  margin: 0.75em 0;
+  padding: var(--mantine-spacing-sm);
+  overflow-x: auto;
+  border-radius: var(--mantine-radius-sm);
+  background: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.prose :global(pre code) {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.5;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.prose :global(:not(pre) > code) {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--mantine-radius-xs);
+  background: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+/* Raw / JSON single block */
+.codeBlock {
+  margin: 0;
+  padding: var(--mantine-spacing-md);
+  overflow-x: auto;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.55;
+  background: transparent;
+}
+
+.codeBlock code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.invalidJsonNote {
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: var(--mantine-spacing-lg);
+}
+
+.tabsList {
+  flex-wrap: wrap;
+}
+
+.chunkListScroll {
+  max-height: min(70vh, 560px);
+  min-height: 120px;
+  overflow: auto;
+  padding: var(--mantine-spacing-xs);
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  min-width: 0;
+}
+
+.chunkCard {
+  min-width: 0;
+  flex-shrink: 0;
+  background: light-dark(var(--mantine-color-body), var(--mantine-color-dark-7));
+}
+
+.chunkSectionPath {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.chunkTextExcerpt,
+.chunkTextFull {
+  min-width: 0;
+}
+
+.chunkPre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.55;
+}

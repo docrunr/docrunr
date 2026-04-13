@@ -1,0 +1,32 @@
+Unicode Stress Test Document
+========================================
+
+1. Curly quotes and apostrophes:
+   “Dit is een test” en ‘dit ook’
+   He said “Hello” and she replied ‘Hi’
+
+2. Non-breaking spaces and soft hyphens:
+   Woord met nbsp (non-breaking spaces)
+   Lang­woord­met­zachte­af­bre­kingen (soft hyphens)
+
+3. Combining characters:
+   é (e + combining acute) vs é (precomposed)
+   ñ (n + combining tilde) vs ñ (precomposed)
+
+4. Mixed language with special chars:
+   Dutch: Coördinatie, financiële, geïnteresseerd
+   German: Größe, Müller, Straße
+   French: Ça va, Père Noël, façade
+   English: naïve, résumé, café
+
+5. Currency and symbols:
+   € 1.234,56 | £ 2,345.67 | ¥ 10,000 | $ 99.99
+   ½ ¼ ¾ | © ® ™ | → ← ↑ ↓ | • ◦ ▪
+
+6. Zero-width characters:
+   Word​with​zero​width​space (invisible breaks)
+   Word‌with‌zwnjhere (zero-width non-joiner)
+
+7. Emoji in text:
+   Status: ✅ Gereed | ⚠️ Waarschuwing | ❌ Fout
+   Rating: ⭐⭐⭐⭐☆

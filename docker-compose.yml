@@ -1,0 +1,4 @@
+# Default: same as historically — local STORAGE_TYPE with ./.data mounted at /data.
+include:
+  - docker-compose.base.yml
+  - docker-compose.local.yml

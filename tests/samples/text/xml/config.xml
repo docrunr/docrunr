@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <application name="DocumentService" version="2.1.0">
+        <description>Document management system for government agencies</description>
+        <author>Twan van Gorp</author>
+        <lastModified>2026-01-16T17:05:27.947790</lastModified>
+    </application>
+    <settings>
+        <database>
+            <host>localhost</host>
+            <port>5432</port>
+            <name>docrunr_db</name>
+            <poolSize>10</poolSize>
+        </database>
+        <storage>
+            <path>/var/lib/documents</path>
+            <maxSizeMB>10240</maxSizeMB>
+            <encryption>true</encryption>
+        </storage>
+        <logging>
+            <level>INFO</level>
+            <format>json</format>
+            <retention>30</retention>
+        </logging>
+    </settings>
+</configuration>

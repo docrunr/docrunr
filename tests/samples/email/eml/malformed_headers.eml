@@ -1,0 +1,12 @@
+Subject: Test met base64 encoding
+From: =?utf-8?b?w5xuw69jw7Zkw6kgTsOgbWU=?= <unicode@example.nl>
+To: test@rijksoverheid.nl
+Date: Mon, 01 Jan 2024 09:05:03 +0100
+X-Custom-Header: Waarde met speciale tekens: =?utf-8?b?4oKsLCDDqywgw7E=?=
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+Test e-mail met bijzondere headers.
+
+Vaak west zeer.

@@ -1,0 +1,232 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "f='${input:testFilter}'; cmd='uv run pytest tests/core/ tests/worker/ -v'; [ \"$f\" != \"*\" ] && cmd=\"$cmd -k $f\"; eval $cmd",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test:samples",
+      "type": "shell",
+      "command": "uv run docrunr tests/samples/ --out .out --verbose --include '${input:includeFilter}'",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test:integration",
+      "type": "shell",
+      "command": "set -a; source .env; set +a; export DOCRUNR_INTEGRATION_STORAGE=local; export RABBITMQ_HOST=127.0.0.1; export DOCRUNR_HEALTH_URL=\"http://127.0.0.1:${HEALTH_PORT:-8080}/health\"; src='${input:integrationSampleSource}'; n='${input:integrationSampleCount}'; cmd='uv run pytest tests/integration -v'; if [ -n \"$n\" ] && [ \"$n\" != \"0\" ] && [ \"$n\" != \"*\" ]; then cmd=\"$cmd --integration-sample-limit=$n\"; fi; export INTEGRATION_SAMPLE_SOURCE=\"$src\"; eval $cmd",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test:integration:minio",
+      "type": "shell",
+      "command": "set -a; source .env; set +a; export DOCRUNR_INTEGRATION_STORAGE=minio; export RABBITMQ_HOST=127.0.0.1; export DOCRUNR_HEALTH_URL=\"http://127.0.0.1:${HEALTH_PORT:-8080}/health\"; export DOCRUNR_INTEGRATION_MINIO_ENDPOINT=\"127.0.0.1:${MINIO_PORT:-9000}\"; src='${input:integrationSampleSource}'; n='${input:integrationSampleCount}'; cmd='uv run pytest tests/integration -v'; if [ -n \"$n\" ] && [ \"$n\" != \"0\" ] && [ \"$n\" != \"*\" ]; then cmd=\"$cmd --integration-sample-limit=$n\"; fi; export INTEGRATION_SAMPLE_SOURCE=\"$src\"; eval $cmd",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "download:samples",
+      "type": "shell",
+      "command": "mime='${input:downloadMimeType}'; n='${input:downloadDocCount}'; uv run python -m tests.downloads \"$mime\" \"$n\"",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker:run",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.base.yml -f docker-compose.local.yml up -d --build --remove-orphans && docker compose -f docker-compose.base.yml -f docker-compose.local.yml ps",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker:run:minio",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.base.yml -f docker-compose.minio.yml up -d --build --remove-orphans && docker compose -f docker-compose.base.yml -f docker-compose.minio.yml ps",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev",
+      "type": "shell",
+      "command": "node ./scripts/dev.mjs",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker:build",
+      "type": "shell",
+      "command": "docker build -t docrunr:latest .",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "fallow",
+      "type": "shell",
+      "command": "pnpm -C ui exec fallow",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "node ./scripts/lint.mjs",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "skylos",
+      "type": "shell",
+      "command": "uv run skylos .",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "install",
+      "type": "shell",
+      "command": "uv sync && pnpm -C ui install",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "purge",
+      "type": "shell",
+      "command": "./scripts/purge.sh",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "release",
+      "type": "shell",
+      "command": "v='${input:releaseVersion}'; if [ -z \"$v\" ]; then printf '\\n' | ./scripts/release.sh --push; else ./scripts/release.sh --version \"$v\" --push; fi",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testFilter",
+      "type": "promptString",
+      "description": "Test name filter (e.g. 'pipeline') — default * = all",
+      "default": "*"
+    },
+    {
+      "id": "includeFilter",
+      "type": "promptString",
+      "description": "File filter (e.g. 'docx', 'pdf', '*.html') — default * = all",
+      "default": "*"
+    },
+    {
+      "id": "integrationSampleCount",
+      "type": "promptString",
+      "description": "Sample file count for e2e jobs (tests/samples or .data/downloads). 0 or * = all. Start stack first (docker:run / docker:run:minio); set DOCRUNR_INTEGRATION_STORAGE to match storage.",
+      "default": "5"
+    },
+    {
+      "id": "integrationSampleSource",
+      "type": "pickString",
+      "description": "Sample source for integration tests.",
+      "options": ["samples", "downloads"],
+      "default": "samples"
+    },
+    {
+      "id": "downloadMimeType",
+      "type": "promptString",
+      "description": "Mimetype or extension alias (e.g. pdf, docx, application/pdf). Comma-separated is supported.",
+      "default": "pdf"
+    },
+    {
+      "id": "downloadDocCount",
+      "type": "promptString",
+      "description": "Number of documents to download per mimetype.",
+      "default": "5"
+    },
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Version X.Y.Z, or leave empty for automatic patch bump (recommended in VS Code tasks).",
+      "default": ""
+    }
+  ]
+}

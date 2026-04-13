@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<budgetReport year="2024" quarter="Q2">
+    <organization>Ministerie van Stichting Feenstra</organization>
+    <reportDate>2026-01-16T17:05:28.068864</reportDate>
+    <summary>
+        <totalBudget>5000000</totalBudget>
+        <totalSpent>3200000</totalSpent>
+        <status>Op schema</status>
+    </summary>
+    <items>
+    <budgetItem>
+        <category>Personeelskosten</category>
+        <planned>97912</planned>
+        <q1Actual>19739</q1Actual>
+        <q2Actual>19992</q2Actual>
+        <remaining>58181</remaining>
+    </budgetItem>
+    <budgetItem>
+        <category>Huisvesting</category>
+        <planned>57633</planned>
+        <q1Actual>13469</q1Actual>
+        <q2Actual>13187</q2Actual>
+        <remaining>30977</remaining>
+    </budgetItem>
+    <budgetItem>
+        <category>ICT-infrastructuur</category>
+        <planned>400722</planned>
+        <q1Actual>82675</q1Actual>
+        <q2Actual>137772</q2Actual>
+        <remaining>180275</remaining>
+    </budgetItem>
+    <budgetItem>
+        <category>Externe inhuur</category>
+        <planned>100647</planned>
+        <q1Actual>28150</q1Actual>
+        <q2Actual>32666</q2Actual>
+        <remaining>39831</remaining>
+    </budgetItem>
+    <budgetItem>
+        <category>Opleidingen</category>
+        <planned>138018</planned>
+        <q1Actual>37596</q1Actual>
+        <q2Actual>28514</q2Actual>
+        <remaining>71908</remaining>
+    </budgetItem>
+    </items>
+</budgetReport>

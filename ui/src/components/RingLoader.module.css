@@ -1,0 +1,10 @@
+.root {
+  width: var(--loader-size);
+  height: var(--loader-size);
+  stroke: var(--loader-color);
+}
+
+/* Default gray loader color is gray-filled (too dark on dark.body). Use the same token as gray “light” UI text/icons. */
+:global([data-mantine-color-scheme='dark']) .root {
+  stroke: var(--mantine-color-gray-light-color);
+}

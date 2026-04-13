@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+.env
+.mypy_cache/
+.ruff_cache/
+.fallow/
+.skylos/
+.kreuzberg/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+.temp/
+.out/
+node_modules/
+.pnpm-store/
+
+# Local storage for docker bind mounts (see .data/.gitkeep); keep directory, ignore contents
+.data/*
+!.data/.gitkeep
+
+# Local SQLite artifacts
+*.sqlite
+*.sqlite-*

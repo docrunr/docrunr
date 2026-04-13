@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.fallow.tools/schemas/fallowrc.json",
+  "ignoreExports": [
+    {
+      "file": "src/**/*.module.css",
+      "exports": ["*"]
+    }
+  ],
+  "health": {
+    "maxCognitive": 24
+  }
+}

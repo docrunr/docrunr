@@ -1,0 +1,71 @@
+# Shared worker + RabbitMQ stack. Combine with an overlay:
+#   Local:  docker compose -f docker-compose.base.yml -f docker-compose.local.yml up
+#   MinIO:  docker compose -f docker-compose.base.yml -f docker-compose.minio.yml up
+# Default `docker compose up` uses docker-compose.yml, which includes base + local.
+
+services:
+  worker:
+    image: ${DOCRUNR_IMAGE:-docrunr:latest}
+    build: .
+    restart: unless-stopped
+    # Prefer the `local` driver, or configure `json-file` rotation explicitly.
+    # Example:
+    # logging:
+    #   driver: local
+    # Alternative:
+    # logging:
+    #   driver: json-file
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "5"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE}
+      RABBITMQ_RESULT_QUEUE: ${RABBITMQ_RESULT_QUEUE}
+      RABBITMQ_DLQ_QUEUE: ${RABBITMQ_DLQ_QUEUE:-docrunr.dlq}
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_SECURE: ${MINIO_SECURE}
+      JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      HEALTH_PORT: ${HEALTH_PORT}
+      SQLITE_BASE_PATH: ${SQLITE_BASE_PATH:-/db}
+      UI_PASSWORD: ${UI_PASSWORD:-}
+    volumes:
+      - worker-db:/db
+    ports:
+      - "${HEALTH_PORT}:${HEALTH_PORT}"
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:4.0-management-alpine}
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  rabbitmq-data:
+    name: docrunr-rabbitmq-data
+  worker-db:
+    name: docrunr-worker-db

@@ -1,0 +1,48 @@
+.appNavbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-lg);
+}
+
+.sidebarBrandSection {
+  display: flex;
+  justify-content: center;
+}
+
+.sidebarBrandImage {
+  width: 24px;
+  height: auto;
+  flex-shrink: 0;
+  display: block;
+  /* Same foreground token as ActionIcon / Tabler icons: gray + light|subtle */
+  color: var(--mantine-color-gray-light-color);
+}
+
+.docrunrLogo > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebarNavStack {
+  padding-top: var(--mantine-spacing-xs);
+}
+
+.sidebarFooterStack {
+  padding-top: var(--mantine-spacing-xs);
+}
+
+.heatmapScroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.heatmapScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus,
+.recharts-surface:focus {
+  outline: none;
+}

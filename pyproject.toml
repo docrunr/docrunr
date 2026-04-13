@@ -1,0 +1,81 @@
+[project]
+name = "docrunr-workspace"
+version = "0.0.0"
+description = "Workspace root for the DocRunr monorepo."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "docrunr",
+    "docrunr-worker",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "skylos>=4.2.1",
+    "types-psutil>=5.9",
+]
+
+[tool.uv.workspace]
+members = ["core", "worker"]
+
+[tool.uv.sources]
+docrunr = { workspace = true }
+docrunr-worker = { workspace = true }
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+ignore = [
+    "B008",   # function-call-in-default-argument — standard Typer pattern
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "magika.*",
+    "tiktoken.*",
+    "docling.*",
+    "markitdown.*",
+    "kreuzberg.*",
+    "pypdfium2.*",
+    "bs4.*",
+    "pika.*",
+    "pydantic_settings.*",
+    "minio.*",
+    "typer.*",
+    "rich.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires RabbitMQ, worker, or other real services (opt-in)",
+]
+
+# Skylos TS analysis does not treat React error-boundary hooks as lifecycle methods
+# (unlike componentDidMount, etc.); whitelist them on the defining file.
+[tool.skylos.overrides]
+"ArtifactViewerModal.tsx" = { whitelist = [
+    "getDerivedStateFromError",
+    "componentDidCatch",
+] }
+# Ambient merge of Vite’s ImportMeta (not a runtime class)
+"vite-env.d.ts" = { whitelist = ["ImportMeta"] }

@@ -1,0 +1,100 @@
+{
+  // Python
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+
+  // Editor
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.rulers": [100],
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.trimAutoWhitespace": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // Ruff (Linting & Formatting)
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+
+  "[json]": {
+    "editor.formatOnSave": true
+  },
+
+  // Mypy (Type Checking)
+  "mypy-type-checker.args": ["--config-file=${workspaceFolder}/core/pyproject.toml"],
+
+  // Testing
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests", "-v"],
+  "python.testing.unittestEnabled": false,
+
+  // File Associations
+  "files.associations": {
+    "*.md": "markdown",
+    "pyproject.toml": "toml"
+  },
+
+  // File Tree Exclusions
+  "files.exclude": {
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/*.pyo": true,
+    "**/*.egg-info": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/.coverage": true,
+    "**/htmlcov": true,
+    "**/.eggs": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/*.egg": true,
+    ".DS_Store": true,
+    "**/.kreuzberg": true,
+    "**/.skylos": true,
+    "**/.uv-cache": true,
+    "**/.pnpm-store": true
+  },
+
+  "search.exclude": {
+    "**/.venv": true,
+    "**/uv.lock": true,
+    "**/.temp": true,
+    "**/.kreuzberg": true,
+    "**/.skylos": true,
+    "**/.uv-cache": true,
+    "**/.pnpm-store": true
+  },
+
+  // Terminal
+  "terminal.integrated.env.osx": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+
+  // Watcher Exclusions
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.git/objects/**": true,
+    "**/.mypy_cache/**": true,
+    "**/.ruff_cache/**": true,
+    "**/.out/**": true,
+    "**/.kreuzberg/**": true,
+    "**/.skylos/**": true,
+    "**/.uv-cache/**": true,
+    "**/.pnpm-store/**": true
+  }
+}
