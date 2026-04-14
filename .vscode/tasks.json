@@ -200,7 +200,7 @@
     {
       "id": "integrationSampleCount",
       "type": "promptString",
-      "description": "Sample file count for e2e jobs (tests/samples or .data/downloads). 0 or * = all. Start stack first (docker:run / docker:run:minio); set DOCRUNR_INTEGRATION_STORAGE to match storage.",
+      "description": "Sample file count for e2e jobs (tests/samples or .data/downloads). 0 or * = all.",
       "default": "5"
     },
     {
