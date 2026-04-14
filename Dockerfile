@@ -23,7 +23,7 @@ COPY ui/ ./ui/
 RUN pnpm -C ui build
 
 # Stage 2: Python builder
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -43,7 +43,7 @@ COPY worker/src/ ./worker/src/
 RUN uv sync --frozen --no-dev
 
 # Stage 3: Runtime
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 LABEL org.opencontainers.image.title="DocRunr"
 LABEL org.opencontainers.image.description="Document to clean Markdown and chunks"
