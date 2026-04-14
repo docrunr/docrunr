@@ -13,6 +13,10 @@
   <img src="https://img.shields.io/badge/Queue-RabbitMQ-ff6600?logo=rabbitmq&logoColor=white" alt="RabbitMQ" />
 </p>
 
+<p align="center">
+  <img src="./assets/docrunr-intro.gif" alt="DocRunr dashboard: metrics, activity heatmap, and charts" />
+</p>
+
 DocRunr gives you two ways to run document processing: a CLI for local and batch work, and a Docker container with a UI for your RAG stack development and production deployments.
 
 ### ✨ **Highlights**
