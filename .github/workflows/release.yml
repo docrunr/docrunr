@@ -58,15 +58,12 @@ jobs:
         run: pnpm -C ui run typecheck
 
   publish-pypi:
-    if: false # Change to true to re-enable PyPI publishing.
+    if: true
     runs-on: ubuntu-latest
     needs: verify
     permissions:
       contents: read
-    env:
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      PYPI_REPOSITORY_URL: ${{ vars.PYPI_REPOSITORY_URL }}
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -85,12 +82,9 @@ jobs:
           python -m twine check core/dist/*
 
       - name: Publish to PyPI
-        run: |
-          if [ -n "${PYPI_REPOSITORY_URL}" ]; then
-            python -m twine upload --repository-url "${PYPI_REPOSITORY_URL}" core/dist/*
-          else
-            python -m twine upload core/dist/*
-          fi
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: core/dist/
 
   publish-docker:
     runs-on: ubuntu-latest
