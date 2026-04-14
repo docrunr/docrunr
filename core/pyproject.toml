@@ -1,6 +1,6 @@
 [project]
 name = "docrunr"
-version = "0.0.0"
+version = "0.1.0"
 description = "Core library and CLI for DocRunr document processing."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11,<3.14"
