@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHeatmapMonthLabel, getVisibleHeatmapWeeks } from './ProcessingOverview';
+import { formatHeatmapMonthLabel, getVisibleHeatmapWeeks } from './processingOverviewHeatmap';
 
 describe('getVisibleHeatmapWeeks', () => {
   it('keeps a readable minimum range when the container is narrow', () => {

@@ -1,12 +1,11 @@
-import { useMemo, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Badge, Group, Loader, Text, Tooltip } from '@mantine/core';
+import { Badge, Loader, Text, Tooltip } from '@mantine/core';
 import { type ColumnDef } from '@tanstack/react-table';
-import { IconAlertCircle, IconJson, IconMarkdown } from '@tabler/icons-react';
 import { FileTypeIcon } from '../../../components/icons/FileTypeIcon';
 import type { WorkerJob } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
-import { getQueueRowActions, queueRowActionKey, type QueueRowAction } from './queueJobRowActions';
+import { QueueJobsTableRowActions } from './queueJobsTableRowActions';
 import { formatDurationSeconds } from '../../../utils/duration';
 import { formatFileSize } from '../../../utils/file-size';
 import { mimeTypeToIconExtension } from '../../../utils/mime-types';
@@ -33,71 +32,6 @@ export function fixedWidthStyle(px: number): CSSProperties {
 
 function formatNumber(value: number): string {
   return value.toLocaleString();
-}
-
-function actionLabel(action: QueueRowAction, t: ReturnType<typeof useTranslation>['t']): string {
-  switch (action.kind) {
-    case 'markdown':
-      return t('table.openMarkdown');
-    case 'json':
-      return t('table.openChunks');
-    case 'error':
-      return t('table.viewError');
-  }
-}
-
-const rowActionIconProps = { size: 16, stroke: 1.8 } as const;
-
-function JobRowActions({
-  job,
-  onOpenArtifact,
-  onViewError,
-}: {
-  job: WorkerJob;
-  onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: WorkerJob) => void;
-  onViewError: (job: WorkerJob) => void;
-}) {
-  const { t } = useTranslation();
-  const actions = useMemo(() => getQueueRowActions(job), [job]);
-  if (actions.length === 0) {
-    return null;
-  }
-  return (
-    <Group gap={2} wrap="nowrap" justify="center">
-      {actions.map((action) => {
-        const label = actionLabel(action, t);
-        if (action.kind === 'error') {
-          return (
-            <Tooltip key={queueRowActionKey(action)} label={label}>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="sm"
-                aria-label={label}
-                onClick={() => onViewError(job)}
-              >
-                <IconAlertCircle {...rowActionIconProps} />
-              </ActionIcon>
-            </Tooltip>
-          );
-        }
-        const Icon = action.kind === 'markdown' ? IconMarkdown : IconJson;
-        return (
-          <Tooltip key={queueRowActionKey(action)} label={label}>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              aria-label={label}
-              onClick={() => onOpenArtifact(action.kind, action.path, job)}
-            >
-              <Icon {...rowActionIconProps} />
-            </ActionIcon>
-          </Tooltip>
-        );
-      })}
-    </Group>
-  );
 }
 
 type BuildQueueJobsTableColumnsParams = {
@@ -332,7 +266,7 @@ export function buildQueueJobsTableColumns({
       enableSorting: false,
       meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
       cell: ({ row }) => (
-        <JobRowActions
+        <QueueJobsTableRowActions
           job={row.original}
           onOpenArtifact={onOpenArtifact}
           onViewError={onViewError}

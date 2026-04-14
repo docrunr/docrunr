@@ -31,6 +31,18 @@ import { formatFileSize } from '../../../utils/file-size';
 import { getMimeCountsPerTimeBucket } from '../../processing/lib/mime-series';
 import { getTimeBucketAverages, getTimeBucketSums } from '../../processing/lib/metric-series';
 import type { OverviewTimeRange } from '../../processing/lib/time-buckets';
+import {
+  formatHeatmapMonthLabel,
+  getVisibleHeatmapWeeks,
+  HEATMAP_GAP,
+  HEATMAP_MONTH_LABELS_HEIGHT,
+  HEATMAP_RECT_RADIUS,
+  HEATMAP_RECT_SIZE,
+  HEATMAP_VIEWPORT_PADDING_RIGHT,
+  HEATMAP_WEEKDAY_LABELS,
+  HEATMAP_WEEKDAY_LABELS_WIDTH,
+  parseUtcDateKey,
+} from './processingOverviewHeatmap';
 import { ServerUptime } from './ServerUptime';
 import { StatCard } from './StatCard';
 
@@ -87,47 +99,10 @@ function buildDailyHeatmapData(
   return buckets;
 }
 
-const HEATMAP_MIN_WEEKS = 26;
-const HEATMAP_MAX_WEEKS = 156;
-const HEATMAP_RECT_SIZE = 13;
-const HEATMAP_GAP = 4;
-const HEATMAP_RECT_RADIUS = 3;
-const HEATMAP_WEEKDAY_LABELS_WIDTH = 30;
-const HEATMAP_MONTH_LABELS_HEIGHT = 24;
-const HEATMAP_VIEWPORT_PADDING_RIGHT = 16;
-const HEATMAP_MIN_RELIABLE_VIEWPORT_WIDTH = 160;
-const HEATMAP_WEEKDAY_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
 const CPU_TRANSITION_DURATION_MS = 900;
-
-function parseUtcDateKey(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
-}
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-export function getVisibleHeatmapWeeks(measuredWidth: number, fallbackViewportWidth: number = 0) {
-  const sourceWidth =
-    measuredWidth >= HEATMAP_MIN_RELIABLE_VIEWPORT_WIDTH ? measuredWidth : fallbackViewportWidth;
-  const availableWidth = Math.max(
-    sourceWidth - HEATMAP_WEEKDAY_LABELS_WIDTH - HEATMAP_VIEWPORT_PADDING_RIGHT,
-    0
-  );
-  const visibleWeeks =
-    availableWidth > 0
-      ? Math.floor((availableWidth + HEATMAP_GAP) / (HEATMAP_RECT_SIZE + HEATMAP_GAP))
-      : HEATMAP_MIN_WEEKS;
-
-  return Math.min(HEATMAP_MAX_WEEKS, Math.max(HEATMAP_MIN_WEEKS, visibleWeeks));
-}
-
-export function formatHeatmapMonthLabel(date: string, locale: string): string {
-  return parseUtcDateKey(date).toLocaleDateString(locale, {
-    month: 'short',
-    timeZone: 'UTC',
-  });
 }
 
 function buildHeatmapCalendar(
