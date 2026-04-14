@@ -587,7 +587,7 @@ The worker runs a minimal HTTP server on `HEALTH_PORT` (default 8080) for livene
 When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every HTTP route behaves as documented below. When `UI_PASSWORD` is set, the worker issues `HttpOnly` `SameSite=Lax` session cookies with an internal fixed TTL.
 
 | Endpoint                | Content-Type                          | Purpose                                                                                                                                          |
-| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GET /`                 | `text/html`                           | Human-readable dashboard                                                                                                                         |
 | `GET /health`           | `application/json`                    | Liveness check for Docker / load balancers                                                                                                       |
 | `GET /stats`            | `application/json`                    | Processing counters for monitoring                                                                                                               |
@@ -597,15 +597,15 @@ When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every
 | `POST /api/auth/logout` | `application/json`                    | Revokes server session and clears cookie                                                                                                         |
 | `POST /api/uploads`     | `application/json`                    | Multipart upload (`files` / `file` fields); optional query `priority=0..255` sets job and AMQP priority (default `0`; invalid values → HTTP 400) |
 | `GET /api/jobs`         | `application/json`                    | Persistent job list (`limit`, `status`, `search`); items include `priority`                                                                      |
-| `GET /api/artifact`     | `text/markdown` or `application/json` | Open output artifact by path (`output/...md                                                                                                      | json`) |
+| `GET /api/artifact`     | `text/markdown` or `application/json` | Open output artifact by path (`output/...` with `.md` or `.json` suffix)                                                                        |
 
-### `GET /api/jobs`
+### GET /api/jobs
 
 Jobs are listed with `status` of `processing` while work is in flight, then `ok` or `error` when terminal. Filter with `status` (`ok`, `error`, `processing`, or omit for all).
 
 Response items include lifecycle timestamps when present: `received_at` (worker accepted the message), `finished_at` (terminal outcome recorded; omitted while still `processing`), and `updated_at` (last row update). These fields sit alongside the same result-oriented shape as the queue result message (`job_id`, paths, `duration_seconds`, `error`, `priority`, etc.).
 
-### `/health` response
+### GET /health
 
 ```json
 {
@@ -615,7 +615,7 @@ Response items include lifecycle timestamps when present: `received_at` (worker 
 }
 ```
 
-### `/stats` response
+### GET /stats
 
 ```json
 {
