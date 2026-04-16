@@ -51,8 +51,8 @@ export function WorkerModeProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<WorkerModeContextValue>(
-    () => ({ mode, setMode, isToggleable }),
-    [mode, setMode, isToggleable]
+    () => ({ mode, setMode, isToggleable, envMode }),
+    [mode, setMode, isToggleable, envMode]
   );
 
   return <WorkerModeContext.Provider value={value}>{children}</WorkerModeContext.Provider>;

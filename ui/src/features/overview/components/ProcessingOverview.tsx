@@ -18,9 +18,7 @@ import {
   IconClock,
   IconFileDescription,
   IconStack2,
-  IconTag,
   IconTypography,
-  IconVector,
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,13 +27,13 @@ import { useWorkerAuth } from '../../../app/useWorkerAuth';
 import { useWorkerMode } from '../../../contexts/useWorkerMode';
 import { usePolling } from '../../../hooks/usePolling';
 import { fetchJobs, fetchOverview } from '../../../services/workerApi';
-import type { AnyJob, LlmJob, WorkerOverview } from '../../../services/workerApi.types';
+import type { AnyJob, WorkerOverview } from '../../../services/workerApi.types';
 import { formatFileSize } from '../../../utils/file-size';
+import { getTimeBucketAverages, getTimeBucketSums } from '../../processing/lib/metric-series';
 import {
   getMimeCountsPerTimeBucket,
   getProfileCountsPerTimeBucket,
 } from '../../processing/lib/mime-series';
-import { getTimeBucketAverages, getTimeBucketSums } from '../../processing/lib/metric-series';
 import type { OverviewTimeRange } from '../../processing/lib/time-buckets';
 import {
   formatHeatmapMonthLabel,
@@ -243,10 +241,6 @@ function buildSqrtHeatmapLegendRanges(
   return ranges;
 }
 
-function isLlmJob(job: AnyJob): job is LlmJob {
-  return 'llm_profile' in job;
-}
-
 export function ProcessingOverview() {
   const { t, i18n } = useTranslation();
   const { canFetchProtected } = useWorkerAuth();
@@ -330,21 +324,6 @@ export function ProcessingOverview() {
     if (rangeJobs.length === 0) return 0;
     return totalChunksInRange / rangeJobs.length;
   }, [rangeJobs, totalChunksInRange]);
-  const totalVectorsInRange = useMemo(
-    () => rangeJobs.reduce((sum, j) => sum + (isLlmJob(j) ? j.vector_count : 0), 0),
-    [rangeJobs]
-  );
-  const avgVectorsInRange = useMemo(() => {
-    if (rangeJobs.length === 0) return 0;
-    return totalVectorsInRange / rangeJobs.length;
-  }, [rangeJobs, totalVectorsInRange]);
-  const avgVectorsSparkline = useMemo(
-    () =>
-      getTimeBucketAverages(overviewJobs, timeRange, (j) =>
-        isLlmJob(j) ? j.vector_count : Number.NaN
-      ),
-    [overviewJobs, timeRange]
-  );
   const avgFileSizeInRange = useMemo(() => {
     const sized = rangeJobs.filter(
       (j) =>
@@ -701,7 +680,7 @@ export function ProcessingOverview() {
             sparklineColor={sparklineColor}
           />
 
-          {mode === 'txt' ? (
+          {mode === 'txt' && (
             <StatCard
               title={t('overview.metricTokens')}
               icon={<IconTypography size={16} stroke={1.8} />}
@@ -713,30 +692,20 @@ export function ProcessingOverview() {
                 typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString() : ''
               }
             />
-          ) : (
+          )}
+
+          {mode === 'txt' && (
             <StatCard
-              title={t('overview.metricVectors')}
-              icon={<IconVector size={16} stroke={1.8} />}
-              value={avgVectorsInRange.toFixed(1)}
+              title={t('overview.metricChunks')}
+              icon={<IconStack2 size={16} stroke={1.8} />}
+              value={avgChunksInRange.toFixed(1)}
               subtitle={avgMetricSubtitle}
-              sparklineData={avgVectorsSparkline}
+              sparklineData={getTimeBucketAverages(overviewJobs, timeRange, (j) => j.chunk_count)}
               sparklineColor={sparklineColor}
-              sparkTooltipFormat={(v) =>
-                typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString() : ''
-              }
             />
           )}
 
-          <StatCard
-            title={t('overview.metricChunks')}
-            icon={<IconStack2 size={16} stroke={1.8} />}
-            value={avgChunksInRange.toFixed(1)}
-            subtitle={avgMetricSubtitle}
-            sparklineData={getTimeBucketAverages(overviewJobs, timeRange, (j) => j.chunk_count)}
-            sparklineColor={sparklineColor}
-          />
-
-          {mode === 'txt' ? (
+          {mode === 'txt' && (
             <StatCard
               title={t('overview.metricFileSize')}
               icon={<IconFileDescription size={16} stroke={1.8} />}
@@ -749,18 +718,6 @@ export function ProcessingOverview() {
               sparkTooltipFormat={(v) =>
                 typeof v === 'number' && Number.isFinite(v) ? formatFileSize(Math.round(v)) : ''
               }
-            />
-          ) : (
-            <StatCard
-              title={t('overview.metricProfile')}
-              icon={<IconTag size={16} stroke={1.8} />}
-              value={(() => {
-                const profiles = new Set(rangeJobs.filter(isLlmJob).map((j) => j.llm_profile));
-                return profiles.size > 0 ? [...profiles].join(', ') : '—';
-              })()}
-              subtitle={avgMetricSubtitle}
-              sparklineData={[]}
-              sparklineColor={sparklineColor}
             />
           )}
         </SimpleGrid>

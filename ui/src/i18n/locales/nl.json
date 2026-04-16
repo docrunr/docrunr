@@ -145,6 +145,7 @@
   "mode.label": "Modus",
   "mode.txt": "TXT",
   "mode.llm": "LLM",
+  "mode.fixed": "Worker modus is vast ingesteld op {{mode}}. Toggle uitgeschakeld.",
   "table.llmProfile": "Profiel",
   "table.provider": "Provider",
   "table.vectors": "Vectoren",

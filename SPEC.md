@@ -58,6 +58,7 @@ These are promises DocRunr makes. They do not change without a major version bum
 
 DocRunr supports every file type that its extraction engines can handle. The full list:
 
+
 | Category     | Formats                                           |
 | ------------ | ------------------------------------------------- |
 | PDF          | `.pdf`                                            |
@@ -67,6 +68,7 @@ DocRunr supports every file type that its extraction engines can handle. The ful
 | Text         | `.txt`, `.md`, `.csv`, `.json`, `.xml`            |
 | Email        | `.eml`, `.msg`                                    |
 | Images       | `.jpg`, `.jpeg`, `.png`, `.tiff`, `.bmp`          |
+
 
 File type detection is content-based via Magika, not extension-based.
 
@@ -91,6 +93,7 @@ docrunr ./documents/
 
 ### Options
 
+
 | Option      | Short | Description                                |
 | ----------- | ----- | ------------------------------------------ |
 | `--out`     | `-o`  | Output directory (default: next to input)  |
@@ -99,15 +102,18 @@ docrunr ./documents/
 | `--workers` | `-w`  | Parallel workers for batch (0 = auto/CPUs) |
 | `--include` | `-i`  | Filter files by name, extension, or glob   |
 
+
 When processing a directory, the output mirrors the input directory structure.
 
 ### Exit Codes
+
 
 | Code | Meaning                     |
 | ---- | --------------------------- |
 | 0    | All files processed         |
 | 1    | Some files failed           |
 | 2    | Fatal error or bad argument |
+
 
 ---
 
@@ -263,7 +269,7 @@ Deterministic cleanup rules applied to every extraction:
 - Table cleanup
 - Unicode normalization
 
-**Rule:** If a transformation changes _what information_ is present, it doesn't belong here. Cleaning changes _how_ information is formatted, not _what_ it says.
+**Rule:** If a transformation changes *what information* is present, it doesn't belong here. Cleaning changes *how* information is formatted, not *what* it says.
 
 ---
 
@@ -279,12 +285,14 @@ Chunks are split at structural boundaries in this order of preference:
 2. Paragraphs (natural break points within sections)
 3. Sentence boundaries (only when a section exceeds token budget)
 
+
 | Parameter         | Value      |
 | ----------------- | ---------- |
 | Target size       | 300 tokens |
 | Hard max          | 450 tokens |
 | Token counter     | tiktoken   |
 | Recommended floor | 200 tokens |
+
 
 No overlap. No sliding window. Structure-preserving splits only.
 
@@ -298,6 +306,7 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 
 ### Core
 
+
 | Library          | Purpose                        | License    |
 | ---------------- | ------------------------------ | ---------- |
 | `docling`        | Layout-aware document parsing  | MIT        |
@@ -310,13 +319,16 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 | `typer`          | CLI framework                  | MIT        |
 | `rich`           | Terminal output and progress   | MIT        |
 
+
 ### Worker
+
 
 | Library             | Purpose                      | License    |
 | ------------------- | ---------------------------- | ---------- |
 | `pika`              | RabbitMQ client              | BSD        |
 | `pydantic-settings` | Env-based configuration      | MIT        |
 | `minio`             | S3-compatible storage (opt.) | Apache 2.0 |
+
 
 **Package management:** uv
 
@@ -455,11 +467,13 @@ It is not a framework. It has no plugin system. It does ship with a bundled oper
 
 ### Queues
 
+
 | Queue             | Direction         | Purpose                                      |
 | ----------------- | ----------------- | -------------------------------------------- |
 | `docrunr.jobs`    | Web app → Worker  | Job requests                                 |
 | `docrunr.results` | Worker → Web app  | Processing results                           |
 | `docrunr.dlq`     | Worker → Operator | Dead-lettered messages after bounded retries |
+
 
 All queues are durable. Messages use `delivery_mode=2` (persistent). The `docrunr.jobs` queue is a **priority queue**: declare it with `arguments: {"x-max-priority": 255}` and set AMQP `BasicProperties.priority` on published jobs to match the JSON payload (see below). `docrunr.results` and `docrunr.dlq` are standard queues without priority arguments.
 
@@ -545,11 +559,13 @@ LiteLLM proxy config lives in `litellm.yaml` at the repo root.
 
 ### Queues
 
-| Queue                | Direction                | Purpose              |
-| -------------------- | ------------------------ | -------------------- |
-| `docrunr.llm.jobs`   | Extraction → worker-llm  | LLM job intake       |
-| `docrunr.llm.results`| worker-llm → Web app     | LLM job outcomes     |
-| `docrunr.llm.dlq`    | worker-llm → Operator    | Dead-lettered failures |
+
+| Queue                 | Direction               | Purpose                |
+| --------------------- | ----------------------- | ---------------------- |
+| `docrunr.llm.jobs`    | Extraction → worker-llm | LLM job intake         |
+| `docrunr.llm.results` | worker-llm → Web app    | LLM job outcomes       |
+| `docrunr.llm.dlq`     | worker-llm → Operator   | Dead-lettered failures |
+
 
 All queues are durable with `delivery_mode=2`. Same retry and dead-letter semantics as the extraction worker.
 
@@ -594,16 +610,18 @@ Published by `worker-llm` to `docrunr.llm.results`:
 
 ### Configuration
 
-| Variable                   | Default                          | Description                |
-| -------------------------- | -------------------------------- | -------------------------- |
-| `LITELLM_BASE_URL`         | `http://litellm:4000`            | LiteLLM proxy base URL (`localhost` / `127.0.0.1` is rewritten to ``litellm`` when `RABBITMQ_HOST` is `rabbitmq`, so a host ``.env`` does not break Docker) |
-| `LITELLM_API_KEY`          | _(empty)_                        | API key for LiteLLM        |
-| `LITELLM_TIMEOUT_SECONDS`  | `120`                            | Timeout per LiteLLM call   |
-| `RABBITMQ_LLM_QUEUE`       | `docrunr.llm.jobs`              | Consume queue              |
-| `RABBITMQ_LLM_RESULT_QUEUE`| `docrunr.llm.results`           | Result queue               |
-| `RABBITMQ_LLM_DLQ_QUEUE`   | `docrunr.llm.dlq`              | Dead-letter queue          |
-| `HEALTH_PORT`              | `8080`                         | HTTP listen port inside `worker-llm` (same as TXT; Compose keeps this at **8080** in Docker) |
-| `LLM_HEALTH_PORT`          | `8081`                         | Compose-only: **host** port mapped to container **8080** for `worker-llm` (`LLM_HEALTH_PORT:8080`) |
+
+| Variable                    | Default               | Description                                                                                                                                             |
+| --------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LITELLM_BASE_URL`          | `http://litellm:4000` | LiteLLM proxy base URL (`localhost` / `127.0.0.1` is rewritten to `litellm` when `RABBITMQ_HOST` is `rabbitmq`, so a host `.env` does not break Docker) |
+| `LITELLM_API_KEY`           | *(empty)*             | API key for LiteLLM                                                                                                                                     |
+| `LITELLM_TIMEOUT_SECONDS`   | `120`                 | Timeout per LiteLLM call                                                                                                                                |
+| `RABBITMQ_LLM_QUEUE`        | `docrunr.llm.jobs`    | Consume queue                                                                                                                                           |
+| `RABBITMQ_LLM_RESULT_QUEUE` | `docrunr.llm.results` | Result queue                                                                                                                                            |
+| `RABBITMQ_LLM_DLQ_QUEUE`    | `docrunr.llm.dlq`     | Dead-letter queue                                                                                                                                       |
+| `HEALTH_PORT`               | `8080`                | HTTP listen port inside `worker-llm` (same as TXT; Compose keeps this at **8080** in Docker)                                                            |
+| `LLM_HEALTH_PORT`           | `8081`                | Compose-only: **host** port mapped to container **8080** for `worker-llm` (`LLM_HEALTH_PORT:8080`)                                                      |
+
 
 All RabbitMQ and storage variables from the extraction worker are also supported.
 
@@ -613,10 +631,12 @@ All RabbitMQ and storage variables from the extraction worker are also supported
 
 The worker and web app communicate files through shared storage. Two backends are supported:
 
+
 | Backend | Use case                     | Configuration                                   |
 | ------- | ---------------------------- | ----------------------------------------------- |
 | `local` | Docker volumes, NFS mounts   | `STORAGE_TYPE=local`, `STORAGE_BASE_PATH=/data` |
-| `minio` | S3-compatible object storage | `STORAGE_TYPE=minio`, `MINIO_*` env vars        |
+| `minio` | S3-compatible object storage | `STORAGE_TYPE=minio`, `MINIO_`* env vars        |
+
 
 ### Path Convention
 
@@ -651,6 +671,7 @@ Files use **time-partitioned, UUID-named paths** to prevent collisions and keep 
 
 All worker settings are environment variables. No config files. No CLI flags.
 
+
 | Variable                | Default           | Description                                                                                                                                           |
 | ----------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RABBITMQ_HOST`         | `rabbitmq`        | RabbitMQ hostname                                                                                                                                     |
@@ -668,18 +689,20 @@ All worker settings are environment variables. No config files. No CLI flags.
 | `MINIO_BUCKET`          | `docrunr`         | MinIO bucket name                                                                                                                                     |
 | `MINIO_SECURE`          | `false`           | Use TLS for MinIO                                                                                                                                     |
 | `JOB_TIMEOUT_SECONDS`   | `120`             | Per-job processing timeout                                                                                                                            |
-| `HEALTH_PORT`           | `8080`            | TXT worker health/dashboard HTTP port                                                                                                                  |
-| `LLM_HEALTH_PORT`     | `8081`            | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |
+| `HEALTH_PORT`           | `8080`            | TXT worker health/dashboard HTTP port                                                                                                                 |
+| `LLM_HEALTH_PORT`       | `8081`            | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |
 | `SQLITE_BASE_PATH`      | `/db`             | Base path for SQLite worker UI persistence; worker stores DB at `<base>/<hostname>/docrunr.sqlite`                                                    |
 | `UI_PASSWORD`           | (empty)           | If non-empty, enables optional HTTP session auth (bundled UI uses a password form + cookie) for `/api/jobs`, `/api/artifact`, and `POST /api/uploads` |
+
 
 ---
 
 ## 23. Health and Stats
 
-The TXT extraction worker listens on `HEALTH_PORT` (default **8080** on the host in Compose). `worker-llm` uses the same **8080** listen port inside its container; Compose publishes it on **`LLM_HEALTH_PORT`** (default **8081**) on the host so both workers can run together. Each process exposes liveness checks, the bundled dashboard (`ui_dist`), and the JSON APIs below. The LLM worker does not implement `POST /api/uploads` (embeddings jobs are published to RabbitMQ, not via browser upload).
+The TXT extraction worker listens on `HEALTH_PORT` (default **8080** on the host in Compose). `worker-llm` uses the same **8080** listen port inside its container; Compose publishes it on `**LLM_HEALTH_PORT`** (default **8081**) on the host so both workers can run together. Each process exposes liveness checks, the bundled dashboard (`ui_dist`), and the JSON APIs below. The LLM worker does not implement `POST /api/uploads` (embeddings jobs are published to RabbitMQ, not via browser upload).
 
 When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every HTTP route behaves as documented below. When `UI_PASSWORD` is set, the worker issues `HttpOnly` `SameSite=Lax` session cookies with an internal fixed TTL.
+
 
 | Endpoint                | Content-Type                          | Purpose                                                                                                                                          |
 | ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -692,7 +715,8 @@ When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every
 | `POST /api/auth/logout` | `application/json`                    | Revokes server session and clears cookie                                                                                                         |
 | `POST /api/uploads`     | `application/json`                    | Multipart upload (`files` / `file` fields); optional query `priority=0..255` sets job and AMQP priority (default `0`; invalid values → HTTP 400) |
 | `GET /api/jobs`         | `application/json`                    | Persistent job list (`limit`, `status`, `search`); items include `priority`                                                                      |
-| `GET /api/artifact`     | `text/markdown` or `application/json` | Open output artifact by path (`output/...` with `.md` or `.json` suffix)                                                                        |
+| `GET /api/artifact`     | `text/markdown` or `application/json` | Open output artifact by path (`output/...` with `.md` or `.json` suffix)                                                                         |
+
 
 ### GET /api/jobs
 

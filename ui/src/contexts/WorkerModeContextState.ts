@@ -6,10 +6,12 @@ export type WorkerModeContextValue = {
   mode: WorkerMode;
   setMode: (mode: WorkerMode) => void;
   isToggleable: boolean;
+  envMode: WorkerMode | null;
 };
 
 export const WorkerModeContext = createContext<WorkerModeContextValue>({
   mode: 'txt',
   setMode: () => {},
   isToggleable: false,
+  envMode: null,
 });

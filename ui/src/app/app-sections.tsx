@@ -24,12 +24,12 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LangFlag } from '../components/flags/LangFlag';
 import { useWorkerMode } from '../contexts/useWorkerMode';
-import { LANG_STORAGE_KEY, SUPPORTED_LANGS, type UiLanguage } from '../i18n';
 import { ProcessingOverview } from '../features/overview/components/ProcessingOverview';
 import { QueueJobsTable } from '../features/queue/components/QueueJobsTable';
-import { RabbitmqStatus } from '../features/queue/components/RabbitmqStatus';
 import { QueueThroughputChart } from '../features/queue/components/QueueThroughputChart';
+import { RabbitmqStatus } from '../features/queue/components/RabbitmqStatus';
 import { UploadModal } from '../features/uploads/components/UploadModal';
+import { LANG_STORAGE_KEY, SUPPORTED_LANGS, type UiLanguage } from '../i18n';
 import type { AnyJobsResponse } from '../services/workerApi.types';
 import { SidebarToggleIcon } from './sidebar-toggle-icon';
 import { useWorkerAuth } from './useWorkerAuth';
@@ -49,7 +49,7 @@ export function AppMainToolbar({
 }: AppMainToolbarProps) {
   const { t, i18n } = useTranslation();
   const { canFetchProtected, authEnabled, authenticated, logout } = useWorkerAuth();
-  const { mode, setMode, isToggleable } = useWorkerMode();
+  const { mode, setMode, isToggleable, envMode } = useWorkerMode();
   const [uploadOpened, setUploadOpened] = useState(false);
   const sidebarLabel = sidebarOpened ? t('sidebar.hide') : t('sidebar.show');
   const themeLabel = isDarkScheme ? t('theme.switchToLight') : t('theme.switchToDark');
@@ -82,7 +82,7 @@ export function AppMainToolbar({
             <SidebarToggleIcon opened={sidebarOpened} />
           </ActionIcon>
         </Tooltip>
-        {isToggleable && (
+        {isToggleable ? (
           <SegmentedControl
             size="xs"
             data={[
@@ -92,6 +92,21 @@ export function AppMainToolbar({
             value={mode}
             onChange={(v) => setMode(v as 'txt' | 'llm')}
           />
+        ) : (
+          <Tooltip
+            label={t('mode.fixed', { mode: envMode?.toUpperCase() })}
+            transitionProps={{ duration: 0 }}
+          >
+            <SegmentedControl
+              size="xs"
+              data={[
+                { value: 'txt', label: t('mode.txt') },
+                { value: 'llm', label: t('mode.llm') },
+              ]}
+              value={mode}
+              disabled
+            />
+          </Tooltip>
         )}
       </Group>
       <Group gap={6} wrap="nowrap" align="center">

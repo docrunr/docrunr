@@ -78,9 +78,11 @@ node ./scripts/dev.mjs --llm
 <details>
 <summary>Queue payloads</summary>
 
-Job (`docrunr.jobs`): `job_id`, `source_path` required; optional `filename`, `options`, `priority` (0–255). Declare the queue with priority (e.g. `x-max-priority: 255`) and set AMQP `priority` to match.
+**Extraction**
 
-Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_path` or `error`; echoes `priority`.
+Job (`docrunr.jobs`): `job_id`, `source_path` required; optional `filename`, `options`, `priority` (0–255), `llm_profile` (LiteLLM `model_name`; when non-empty and extraction succeeds, the worker publishes a follow-up to `docrunr.llm.jobs`). Declare the queue with priority (e.g. `x-max-priority: 255`) and set AMQP `priority` to match.
+
+Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_path` or `error`; echoes `priority` and `llm_profile`.
 
 ```json
 {
@@ -88,7 +90,8 @@ Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_
   "filename": "report.pdf",
   "source_path": "input/…/….pdf",
   "options": {},
-  "priority": 0
+  "priority": 0,
+  "llm_profile": "embed-local"
 }
 ```
 
@@ -96,34 +99,61 @@ Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_
 {
   "job_id": "…",
   "status": "ok",
+  "filename": "report.pdf",
+  "source_path": "input/…/….pdf",
   "markdown_path": "output/…/….md",
   "chunks_path": "output/…/….json",
   "total_tokens": 0,
   "chunk_count": 0,
   "duration_seconds": 0,
   "error": null,
-  "priority": 0
+  "priority": 0,
+  "llm_profile": "embed-local"
+}
+```
+
+**LLM** (optional `worker-llm`; see [`SPEC.md`](./SPEC.md), section 20)
+
+After a successful extraction with `llm_profile` set, the TXT worker publishes to `docrunr.llm.jobs`. `worker-llm` consumes that queue and publishes outcomes to `docrunr.llm.results` (failures that exhaust retries go to `docrunr.llm.dlq`, same pattern as extraction).
+
+LLM job (`docrunr.llm.jobs`): `job_id`, `extract_job_id`, `filename`, `source_path`, `chunks_path`, `llm_profile` required for normal processing; optional `priority`, `metadata` (object).
+
+```json
+{
+  "job_id": "new-uuid",
+  "extract_job_id": "original-extraction-uuid",
+  "filename": "report.pdf",
+  "source_path": "input/2026/04/15/00/original-uuid.pdf",
+  "chunks_path": "output/2026/04/15/00/original-uuid.json",
+  "llm_profile": "embed-local",
+  "priority": 0,
+  "metadata": {}
+}
+```
+
+LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artifact_path` points at the embeddings JSON; `provider`, `chunk_count`, `vector_count`, and `duration_seconds` describe the run.
+
+```json
+{
+  "job_id": "new-uuid",
+  "extract_job_id": "original-extraction-uuid",
+  "status": "ok",
+  "filename": "report.pdf",
+  "source_path": "input/…/….pdf",
+  "chunks_path": "output/…/….json",
+  "llm_profile": "embed-local",
+  "provider": "ollama",
+  "chunk_count": 12,
+  "vector_count": 12,
+  "duration_seconds": 3.41,
+  "artifact_path": "output/…/….embeddings.json",
+  "error": null
 }
 ```
 
 </details>
 
-<details>
-<summary>Environment variables</summary>
-
-| Variable              | Default      | Notes                                     |
-| --------------------- | ------------ | ----------------------------------------- |
-| `RABBITMQ_*`          | see `.env`   | Host, port, user, password, queue names   |
-| `STORAGE_TYPE`        | `local`      | `minio` for S3-compatible                 |
-| `STORAGE_BASE_PATH`   | `/data`      | Local root                                |
-| `MINIO_*`             | (see `.env`) | When `STORAGE_TYPE=minio`                 |
-| `JOB_TIMEOUT_SECONDS` | `120`        | Per job                                   |
-| `WORKER_CONCURRENCY`  | `1`          | Prefetch and in-process parallelism       |
-| `HEALTH_PORT`         | `8080`       | HTTP + healthcheck                        |
-| `SQLITE_BASE_PATH`    | `/db`        | Job history DB per replica                |
-| `UI_PASSWORD`         | (empty)      | Optional session login for sensitive APIs |
-
-</details>
+**Environment variables:** Text extraction and LLM workers are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, *Configuration*, and section 20 for the LLM worker).
 
 ### 🛠 **Tech stack**
 
