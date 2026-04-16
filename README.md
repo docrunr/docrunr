@@ -52,24 +52,26 @@ The bundled UI sits on top of that same flow. It gives you an easy way to upload
 
 ### 🐳 **Docker**
 
-The Docker setup is: RabbitMQ, DocRunr, and local storage under `./.data`:
+The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
 
 ```bash
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080** for the dashboard. From there you can upload documents, inspect jobs, and view artifacts. The worker also exposes `/health`, `/stats`, and `/api/*` on the same port.
+Open **http://localhost:8080** for the TXT extraction dashboard (upload, jobs, artifacts). Open **http://localhost:8081** for the LLM worker dashboard (host port only; inside Docker both workers listen on **8080**, with **8081→8080** published for `worker-llm`). Each worker serves `/health`, `/stats`, and `/api/*` on its host URL.
 
-**Object storage:** You can also use MinIO and switch the worker to S3-compatible storage.
+If the TXT container fails to start with “bind: address already in use” on **8080**, another process on your machine is using that port—stop it or change **`HEALTH_PORT`** in `.env` and the compose port mapping for `worker`.
 
-**LLM embeddings (optional):** Add `worker-llm` for post-extraction embeddings via LiteLLM. Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md` §20](./SPEC.md) for the full protocol.
+**Object storage:** Use the MinIO overlay so both workers use S3-compatible storage (MinIO must be last so it overrides `STORAGE_TYPE`):
 
 ```bash
-# Docker (Ollama in Docker):
-docker compose -f docker-compose.base.yml -f docker-compose.local.yml \
-  -f docker-compose.llm.yml -f docker-compose.ollama.yml up -d --build
+docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
+```
 
-# Dev mode (host Ollama via brew):
+**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which **`ollama pull`s** each configured model before **`exec ollama serve`**. Set **`OLLAMA_EMBED_MODELS`** to a comma-separated list (e.g. `nomic-embed-text,llama3.2`), or a single name via **`OLLAMA_EMBED_MODEL`** (used when **`OLLAMA_EMBED_MODELS`** is empty).
+
+```bash
+# Dev mode (host Ollama via brew; TXT on 8080, worker-llm on 8081):
 node ./scripts/dev.mjs --llm
 ```
 

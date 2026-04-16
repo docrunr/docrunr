@@ -1,7 +1,7 @@
-# Shared worker + RabbitMQ stack. Combine with an overlay:
-#   Local:  docker compose -f docker-compose.base.yml -f docker-compose.local.yml up
-#   MinIO:  docker compose -f docker-compose.base.yml -f docker-compose.minio.yml up
-# Default `docker compose up` uses docker-compose.yml, which includes base + local.
+# Shared worker + RabbitMQ stack. Combine with overlays (see repo `docker-compose.yml`).
+#   Local disk: docker-compose.local.yml
+#   MinIO:      docker-compose.minio.yml
+#   LLM:        docker-compose.llm.yml (+ docker-compose.ollama.yml for in-Docker Ollama)
 
 services:
   worker:

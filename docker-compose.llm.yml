@@ -1,5 +1,6 @@
-# Optional LLM worker overlay. Combine with base + local (or minio):
-#   docker compose -f docker-compose.base.yml -f docker-compose.local.yml -f docker-compose.llm.yml up
+# LLM worker + LiteLLM overlay. Combine with base (+ local and/or minio as needed).
+# `worker-llm` listens on **8080 inside the container** (same as TXT). Only the host publish
+# port differs: `LLM_HEALTH_PORT` (default 8081) → container 8080.
 #
 # LiteLLM defaults to host Ollama (host.docker.internal:11434).
 # For Docker-hosted Ollama, layer docker-compose.ollama.yml on top.
@@ -23,7 +24,7 @@ services:
       start_period: 15s
 
   worker-llm:
-    image: ${DOCRUNR_LLM_IMAGE:-docrunr-worker-llm:latest}
+    image: ${DOCRUNR_LLM_IMAGE:-docrunr-llm:latest}
     build:
       context: .
       dockerfile: Dockerfile.llm
@@ -53,14 +54,14 @@ services:
       LITELLM_TIMEOUT_SECONDS: ${LITELLM_TIMEOUT_SECONDS:-120}
       JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS:-300}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
-      HEALTH_PORT: ${HEALTH_PORT:-8080}
+      HEALTH_PORT: "8080"
       SQLITE_BASE_PATH: ${SQLITE_BASE_PATH:-/db}
       UI_PASSWORD: ${UI_PASSWORD:-}
     volumes:
       - ./.data:/data
       - worker-llm-db:/db
     ports:
-      - "${HEALTH_PORT:-8080}:${HEALTH_PORT:-8080}"
+      - "${LLM_HEALTH_PORT:-8081}:8080"
 
 volumes:
   worker-llm-db:

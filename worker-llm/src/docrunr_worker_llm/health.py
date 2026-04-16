@@ -1,4 +1,4 @@
-"""Minimal health/stats HTTP endpoint for the LLM worker."""
+"""Health/stats HTTP server for the LLM worker, including the bundled dashboard static assets."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import hashlib
 import hmac
 import json
 import logging
+import mimetypes
+import os
 import secrets
 import threading
 import time
@@ -13,7 +15,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlparse
 
@@ -268,6 +270,29 @@ _SESSION_COOKIE_SECURE = False
 _UI_AUTH_PROTECTED_GROUPS: frozenset[str] = frozenset({"jobs", "artifacts"})
 
 
+def _resolve_ui_dist() -> Path | None:
+    """Resolve bundled ui_dist (Docker) or ui/dist (local builds)."""
+    here = Path(__file__).resolve().parent
+    repo_root = here.parents[3] if len(here.parents) > 3 else here
+    configured = os.environ.get("DOCRUNR_UI_DIST")
+    candidates: list[Path] = []
+    if configured:
+        candidates.append(Path(configured).expanduser())
+    candidates.extend((here / "ui_dist", repo_root / "ui" / "dist"))
+
+    for path in candidates:
+        try:
+            resolved = path.resolve()
+            if (resolved / "index.html").is_file():
+                return resolved
+        except OSError:
+            continue
+    return None
+
+
+_UI_DIST: Path | None = _resolve_ui_dist()
+
+
 def set_artifact_storage(storage: StorageBackend | None) -> None:
     global _ARTIFACT_STORAGE
     _ARTIFACT_STORAGE = storage
@@ -405,7 +430,8 @@ class _Handler(BaseHTTPRequestHandler):
             params = parse_qs(parsed.query)
             self._artifact_response(params.get("path", [None])[0])
         else:
-            self.send_error(404)
+            if not self._ui_response(path):
+                self.send_error(404)
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -558,6 +584,62 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def _ui_response(self, path: str) -> bool:
+        global _UI_DIST
+        if _UI_DIST is None or not (_UI_DIST / "index.html").is_file():
+            _UI_DIST = _resolve_ui_dist()
+        ui_dist = _UI_DIST
+        if ui_dist is None:
+            if path == "/":
+                self.send_error(503, "UI assets not found")
+                return True
+            return False
+
+        if path == "/":
+            return self._static_file_response(ui_dist / "index.html")
+
+        rel_path = Path(path.lstrip("/"))
+        requested = (ui_dist / rel_path).resolve()
+        try:
+            requested.relative_to(ui_dist)
+        except ValueError:
+            return False
+
+        if requested.is_file():
+            return self._static_file_response(requested)
+
+        # SPA fallback for non-file paths (e.g. /jobs).
+        if rel_path.parts and rel_path.parts[0] in {"api", "assets", "health", "stats"}:
+            return False
+        if "." not in rel_path.name:
+            return self._static_file_response(ui_dist / "index.html")
+
+        return False
+
+    def _static_file_response(self, path: Path) -> bool:
+        if not path.is_file():
+            return False
+        try:
+            body = path.read_bytes()
+        except OSError:
+            self.send_error(500)
+            return True
+
+        content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        if content_type.startswith("text/") or content_type in {
+            "application/javascript",
+            "application/json",
+            "image/svg+xml",
+        }:
+            content_type = f"{content_type}; charset=utf-8"
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        return True
 
     def log_message(self, format: str, *args: object) -> None:
         if logger.isEnabledFor(logging.DEBUG):

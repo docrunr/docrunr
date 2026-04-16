@@ -172,11 +172,7 @@ async function ensureRabbitmqHealthy() {
 }
 
 async function ensureLitellmHealthy() {
-  await runChecked(
-    'docker',
-    ['compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.llm.yml', 'up', '-d', 'litellm'],
-    'start litellm',
-  );
+  await runChecked('docker', ['compose', 'up', '-d', 'litellm'], 'start litellm');
   await waitForHttp(LITELLM_HEALTH_URL, 60_000, 'LiteLLM proxy');
 }
 

@@ -1,4 +1,5 @@
-# MinIO-backed storage. Worker uses STORAGE_TYPE=minio; bucket is created by the worker on startup.
+# MinIO-backed storage. When combining with `docker-compose.llm.yml`, list this file **last**
+# so `STORAGE_TYPE=minio` wins over the LLM overlay defaults for both `worker` and `worker-llm`.
 
 services:
   minio:
@@ -23,6 +24,23 @@ services:
   worker:
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      STORAGE_TYPE: minio
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/data}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-docrunr}
+      MINIO_SECURE: "false"
+
+  worker-llm:
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      litellm:
         condition: service_healthy
       minio:
         condition: service_healthy

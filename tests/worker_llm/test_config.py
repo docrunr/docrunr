@@ -28,7 +28,7 @@ class TestLlmWorkerSettings:
         assert settings.consumed_queues == ("docrunr.llm.jobs",)
         assert settings.storage_type == StorageType.LOCAL
         assert settings.storage_base_path == "/data"
-        assert settings.litellm_base_url == "http://localhost:4000"
+        assert settings.litellm_base_url == "http://litellm:4000"
         assert settings.litellm_api_key == ""
         assert settings.litellm_timeout_seconds == 120
         assert settings.job_timeout_seconds == 300
@@ -55,6 +55,24 @@ class TestLlmWorkerSettings:
             assert settings.litellm_base_url == "http://litellm:4000"
             assert settings.litellm_api_key == "sk-test-123"
             assert settings.health_port == 9090
+
+    def test_localhost_litellm_rewritten_when_rabbitmq_is_compose_service(self) -> None:
+        env = {
+            "RABBITMQ_HOST": "rabbitmq",
+            "LITELLM_BASE_URL": "http://localhost:4000",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            settings = LlmWorkerSettings()
+            assert settings.litellm_base_url == "http://litellm:4000"
+
+    def test_localhost_litellm_kept_when_rabbitmq_is_host(self) -> None:
+        env = {
+            "RABBITMQ_HOST": "127.0.0.1",
+            "LITELLM_BASE_URL": "http://localhost:4000",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            settings = LlmWorkerSettings()
+            assert settings.litellm_base_url == "http://localhost:4000"
 
     def test_storage_type_enum(self) -> None:
         assert StorageType.LOCAL.value == "local"

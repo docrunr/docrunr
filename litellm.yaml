@@ -1,6 +1,9 @@
 # LiteLLM proxy config — used by docker-compose.llm.yml.
 # Profiles listed here are the model_name values DocRunr sends as llm_profile.
 # See https://docs.litellm.ai/docs/proxy/configs
+#
+# Docker (docker-compose.ollama.yml): pull names via OLLAMA_EMBED_MODELS (comma-separated) or
+# OLLAMA_EMBED_MODEL; each must exist as an Ollama model tag matching the `ollama/...` names you use.
 
 model_list:
   - model_name: embed-local

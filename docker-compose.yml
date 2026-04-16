@@ -1,4 +1,6 @@
-# Default: same as historically — local STORAGE_TYPE with ./.data mounted at /data.
+# Default stack: TXT + LLM workers (TXT host HEALTH_PORT; LLM host LLM_HEALTH_PORT→8080), LiteLLM, Ollama, local ./.data.
 include:
   - docker-compose.base.yml
   - docker-compose.local.yml
+  - docker-compose.llm.yml
+  - docker-compose.ollama.yml

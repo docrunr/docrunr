@@ -412,7 +412,7 @@ docrunr/
 │
 ├── Dockerfile                     # Single image for CLI + worker
 ├── Dockerfile.llm                 # LLM worker image
-├── docker-compose.yml             # Includes base + local (default `docker compose up`)
+├── docker-compose.yml             # Includes base + local + LLM + Ollama (TXT host HEALTH_PORT; LLM host LLM_HEALTH_PORT→8080)
 ├── docker-compose.base.yml        # Worker + RabbitMQ core stack
 ├── docker-compose.local.yml       # Local bind mounts and dev-oriented defaults
 ├── docker-compose.minio.yml       # MinIO storage overlay
@@ -596,13 +596,14 @@ Published by `worker-llm` to `docrunr.llm.results`:
 
 | Variable                   | Default                          | Description                |
 | -------------------------- | -------------------------------- | -------------------------- |
-| `LITELLM_BASE_URL`         | `http://localhost:4000`          | LiteLLM proxy base URL     |
+| `LITELLM_BASE_URL`         | `http://litellm:4000`            | LiteLLM proxy base URL (`localhost` / `127.0.0.1` is rewritten to ``litellm`` when `RABBITMQ_HOST` is `rabbitmq`, so a host ``.env`` does not break Docker) |
 | `LITELLM_API_KEY`          | _(empty)_                        | API key for LiteLLM        |
 | `LITELLM_TIMEOUT_SECONDS`  | `120`                            | Timeout per LiteLLM call   |
 | `RABBITMQ_LLM_QUEUE`       | `docrunr.llm.jobs`              | Consume queue              |
 | `RABBITMQ_LLM_RESULT_QUEUE`| `docrunr.llm.results`           | Result queue               |
 | `RABBITMQ_LLM_DLQ_QUEUE`   | `docrunr.llm.dlq`              | Dead-letter queue          |
-| `HEALTH_PORT`               | `8080`                          | Health/API port            |
+| `HEALTH_PORT`              | `8080`                         | HTTP listen port inside `worker-llm` (same as TXT; Compose keeps this at **8080** in Docker) |
+| `LLM_HEALTH_PORT`          | `8081`                         | Compose-only: **host** port mapped to container **8080** for `worker-llm` (`LLM_HEALTH_PORT:8080`) |
 
 All RabbitMQ and storage variables from the extraction worker are also supported.
 
@@ -667,7 +668,8 @@ All worker settings are environment variables. No config files. No CLI flags.
 | `MINIO_BUCKET`          | `docrunr`         | MinIO bucket name                                                                                                                                     |
 | `MINIO_SECURE`          | `false`           | Use TLS for MinIO                                                                                                                                     |
 | `JOB_TIMEOUT_SECONDS`   | `120`             | Per-job processing timeout                                                                                                                            |
-| `HEALTH_PORT`           | `8080`            | Health endpoint HTTP port                                                                                                                             |
+| `HEALTH_PORT`           | `8080`            | TXT worker health/dashboard HTTP port                                                                                                                  |
+| `LLM_HEALTH_PORT`     | `8081`            | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |
 | `SQLITE_BASE_PATH`      | `/db`             | Base path for SQLite worker UI persistence; worker stores DB at `<base>/<hostname>/docrunr.sqlite`                                                    |
 | `UI_PASSWORD`           | (empty)           | If non-empty, enables optional HTTP session auth (bundled UI uses a password form + cookie) for `/api/jobs`, `/api/artifact`, and `POST /api/uploads` |
 
@@ -675,7 +677,7 @@ All worker settings are environment variables. No config files. No CLI flags.
 
 ## 23. Health and Stats
 
-The worker runs a minimal HTTP server on `HEALTH_PORT` (default 8080) for liveness checks and operational visibility.
+The TXT extraction worker listens on `HEALTH_PORT` (default **8080** on the host in Compose). `worker-llm` uses the same **8080** listen port inside its container; Compose publishes it on **`LLM_HEALTH_PORT`** (default **8081**) on the host so both workers can run together. Each process exposes liveness checks, the bundled dashboard (`ui_dist`), and the JSON APIs below. The LLM worker does not implement `POST /api/uploads` (embeddings jobs are published to RabbitMQ, not via browser upload).
 
 When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every HTTP route behaves as documented below. When `UI_PASSWORD` is set, the worker issues `HttpOnly` `SameSite=Lax` session cookies with an internal fixed TTL.
 

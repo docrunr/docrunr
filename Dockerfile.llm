@@ -1,7 +1,7 @@
 # DocRunr Worker LLM — optional embedding/LLM post-processing worker
 # Usage:
-#   docker build -f Dockerfile.llm -t docrunr-worker-llm .
-#   docker run docrunr-worker-llm
+#   docker build -f Dockerfile.llm -t docrunr-llm:latest .
+#   docker run docrunr-llm:latest
 
 # Stage 1: UI build (locked to LLM mode)
 FROM node:25-bookworm-slim AS ui-builder
@@ -39,7 +39,6 @@ COPY worker-llm/pyproject.toml ./worker-llm/
 # Install worker-llm dependencies (not core heavy ML deps — just litellm + storage + queue)
 RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-worker-llm
 
-# Copy worker-llm source and install
 COPY worker-llm/src/ ./worker-llm/src/
 RUN uv sync --frozen --no-dev --package docrunr-worker-llm
 

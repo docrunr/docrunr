@@ -35,15 +35,16 @@ WORKDIR /app
 # Copy workspace root (lockfile + workspace definition)
 COPY pyproject.toml uv.lock ./
 
-# Install core dependencies first (cache layer)
+# Install dependencies first (cache layer). Only the TXT worker graph — not worker-llm / litellm.
 COPY core/pyproject.toml ./core/
 COPY worker/pyproject.toml ./worker/
-RUN uv sync --frozen --no-dev --no-install-workspace
+COPY worker-llm/pyproject.toml ./worker-llm/
+RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-worker
 
-# Copy source and install all workspace packages
+# Copy source and install core + worker (omit workspace root so LLM stays out)
 COPY core/src/ ./core/src/
 COPY worker/src/ ./worker/src/
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --package docrunr-worker
 
 # Stage 3: Runtime
 FROM python:3.13-slim AS runtime
