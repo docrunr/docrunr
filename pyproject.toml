@@ -6,6 +6,7 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "docrunr",
     "docrunr-worker",
+    "docrunr-worker-llm",
 ]
 
 [dependency-groups]
@@ -19,11 +20,12 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["core", "worker"]
+members = ["core", "worker", "worker-llm"]
 
 [tool.uv.sources]
 docrunr = { workspace = true }
 docrunr-worker = { workspace = true }
+docrunr-worker-llm = { workspace = true }
 torch = { index = "pytorch-cpu" }
 
 [[tool.uv.index]]
@@ -59,6 +61,7 @@ module = [
     "pika.*",
     "pydantic_settings.*",
     "minio.*",
+    "litellm.*",
     "typer.*",
     "rich.*",
 ]

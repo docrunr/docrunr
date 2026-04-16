@@ -48,6 +48,23 @@ def test_job_payload_round_trip_shape() -> None:
     assert b'"priority":255' in raw
 
 
+def test_job_payload_without_llm_profile_omits_key() -> None:
+    d = job_payload_dict("j1", "f.pdf", "input/j1.pdf")
+    assert "llm_profile" not in d
+
+
+def test_job_payload_with_llm_profile_includes_key() -> None:
+    d = job_payload_dict("j1", "f.pdf", "input/j1.pdf", llm_profile="embed-local")
+    assert d["llm_profile"] == "embed-local"
+
+
+def test_job_payload_bytes_with_llm_profile() -> None:
+    raw = job_payload_bytes(
+        "j1", "f.pdf", "input/j1.pdf", llm_profile="embed-local"
+    )
+    assert b'"llm_profile":"embed-local"' in raw
+
+
 def test_parse_extraction_job_priority_defaults_and_bounds() -> None:
     assert parse_extraction_job_priority({}) == 0
     assert parse_extraction_job_priority({"priority": 0}) == 0

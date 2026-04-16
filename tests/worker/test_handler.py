@@ -169,6 +169,74 @@ def test_handle_extract_job_writes_markdown_and_chunks(tmp_path: Path) -> None:
     assert row["priority"] == 240
 
 
+def test_parse_job_request_with_llm_profile() -> None:
+    body = json.dumps(
+        {
+            "job_id": "j1",
+            "filename": "test.pdf",
+            "source_path": "input/test.pdf",
+            "llm_profile": "embed-local",
+        }
+    ).encode()
+    req = parse_job_request_from_body(body)
+    assert req.llm_profile == "embed-local"
+
+
+def test_parse_job_request_without_llm_profile() -> None:
+    body = json.dumps(
+        {
+            "job_id": "j1",
+            "filename": "test.pdf",
+            "source_path": "input/test.pdf",
+        }
+    ).encode()
+    req = parse_job_request_from_body(body)
+    assert req.llm_profile == ""
+
+
+def test_handle_extract_job_includes_llm_profile_in_result(tmp_path: Path) -> None:
+    base = tmp_path / "data"
+    (base / "input/2026/03/15/14").mkdir(parents=True)
+    (base / "input/2026/03/15/14/job1.pdf").write_bytes(b"test")
+    storage = LocalStorage(str(base))
+    body = json.dumps(
+        {
+            "job_id": "job-1",
+            "filename": "job1.pdf",
+            "source_path": "input/2026/03/15/14/job1.pdf",
+            "llm_profile": "embed-local",
+        }
+    ).encode()
+
+    with patch("docrunr_worker.handler.convert", return_value=_ok_result("job1.pdf")):
+        out = handle_extract_job(body=body, storage=storage, timeout=120)
+
+    row = json.loads(out.result_json)
+    assert row["status"] == "ok"
+    assert row["llm_profile"] == "embed-local"
+
+
+def test_handle_extract_job_no_llm_profile_defaults_empty(tmp_path: Path) -> None:
+    base = tmp_path / "data"
+    (base / "input/2026/03/15/14").mkdir(parents=True)
+    (base / "input/2026/03/15/14/job1.pdf").write_bytes(b"test")
+    storage = LocalStorage(str(base))
+    body = json.dumps(
+        {
+            "job_id": "job-1",
+            "filename": "job1.pdf",
+            "source_path": "input/2026/03/15/14/job1.pdf",
+        }
+    ).encode()
+
+    with patch("docrunr_worker.handler.convert", return_value=_ok_result("job1.pdf")):
+        out = handle_extract_job(body=body, storage=storage, timeout=120)
+
+    row = json.loads(out.result_json)
+    assert row["status"] == "ok"
+    assert row["llm_profile"] == ""
+
+
 def test_handle_extract_job_rejects_non_object_options(tmp_path: Path) -> None:
     storage = LocalStorage(str(tmp_path))
     body = json.dumps(

@@ -28,6 +28,9 @@ import { ProcessingOverview } from '../features/overview/components/ProcessingOv
 import { QueueJobsTable } from '../features/queue/components/QueueJobsTable';
 import { RabbitmqStatus } from '../features/queue/components/RabbitmqStatus';
 import { QueueThroughputChart } from '../features/queue/components/QueueThroughputChart';
+import { LlmJobsTable } from '../features/llm/components/LlmJobsTable';
+import { LlmOverview } from '../features/llm/components/LlmOverview';
+import { useLlmPolling } from '../features/llm/hooks/useLlmPolling';
 import { UploadModal } from '../features/uploads/components/UploadModal';
 import type { WorkerJobsResponse } from '../services/workerApi.types';
 import { SidebarToggleIcon } from './sidebar-toggle-icon';
@@ -305,11 +308,83 @@ function QueueView({
   );
 }
 
+function LlmView({ active }: { active: boolean }) {
+  const { t } = useTranslation();
+  const llm = useLlmPolling(active);
+  return (
+    <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
+      <LlmOverview overview={llm.overview} loading={llm.loading} />
+      <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Group gap="sm" wrap="nowrap" align="center" mb="sm">
+          <TextInput
+            aria-label={t('llm.searchPlaceholder')}
+            placeholder={t('llm.searchPlaceholder')}
+            value={llm.search}
+            onChange={(e) => llm.setSearch(e.currentTarget.value)}
+            size="xs"
+            style={{ flex: '1 1 200px', minWidth: 0, maxWidth: 280 }}
+          />
+          <SegmentedControl
+            aria-label="Filter by status"
+            size="xs"
+            data={[
+              {
+                value: '',
+                label: (
+                  <Tooltip
+                    label={t('llm.filterAll')}
+                    position="bottom"
+                    transitionProps={{ duration: 0 }}
+                  >
+                    <IconList size={16} stroke={1.8} style={{ display: 'block' }} />
+                  </Tooltip>
+                ),
+              },
+              {
+                value: 'processing',
+                label: (
+                  <Tooltip
+                    label={t('llm.filterProcessing')}
+                    position="bottom"
+                    transitionProps={{ duration: 0 }}
+                  >
+                    <IconLoader2 size={16} stroke={1.8} style={{ display: 'block' }} />
+                  </Tooltip>
+                ),
+              },
+              {
+                value: 'error',
+                label: (
+                  <Tooltip
+                    label={t('llm.filterErrors')}
+                    position="bottom"
+                    transitionProps={{ duration: 0 }}
+                  >
+                    <IconAlertTriangle size={16} stroke={1.8} style={{ display: 'block' }} />
+                  </Tooltip>
+                ),
+              },
+            ]}
+            value={llm.statusFilter}
+            onChange={(v) => llm.setStatusFilter(v as '' | 'ok' | 'error' | 'processing')}
+          />
+          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+            {llm.loading && llm.jobs.items.length === 0
+              ? '…'
+              : t('llm.jobCount', { count: llm.jobs.total })}
+          </Text>
+        </Group>
+        <LlmJobsTable jobs={llm.jobs.items} isLoading={llm.loading} />
+      </Box>
+    </Stack>
+  );
+}
+
 function OverviewView() {
   return <ProcessingOverview />;
 }
 
-export type AppSectionId = 'overview' | 'queue';
+export type AppSectionId = 'overview' | 'queue' | 'llm';
 
 type AppSectionContentProps = {
   activeSection: AppSectionId;
@@ -347,6 +422,9 @@ export function AppSectionContent({
         onQueueStatusFilterChange={onQueueStatusFilterChange}
       />
     );
+  }
+  if (activeSection === 'llm') {
+    return <LlmView active />;
   }
   return <OverviewView />;
 }

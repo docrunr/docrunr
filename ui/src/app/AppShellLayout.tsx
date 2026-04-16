@@ -1,5 +1,10 @@
 import { ActionIcon, AppShell, Stack, Tooltip } from '@mantine/core';
-import { IconFileDescription, IconInfoCircle, IconLayoutDashboard } from '@tabler/icons-react';
+import {
+  IconBrain,
+  IconFileDescription,
+  IconInfoCircle,
+  IconLayoutDashboard,
+} from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +16,7 @@ import './App.css';
 type MainNavItem = {
   id: AppSectionId;
   label: string;
-  icon: typeof IconLayoutDashboard | typeof IconFileDescription;
+  icon: typeof IconLayoutDashboard | typeof IconFileDescription | typeof IconBrain;
 };
 
 type NavbarLinkProps = {
@@ -63,6 +68,7 @@ export function AppShellLayout({
     () => [
       { id: 'overview', label: t('nav.overview'), icon: IconLayoutDashboard },
       { id: 'queue', label: t('nav.queue'), icon: IconFileDescription },
+      { id: 'llm', label: t('nav.llm'), icon: IconBrain },
     ],
     [t]
   );

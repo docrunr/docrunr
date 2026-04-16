@@ -34,6 +34,7 @@ class JobRequest:
     filename: str
     source_path: str
     priority: int = 0
+    llm_profile: str = ""
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,7 @@ def _build_outcome(
         "mime_type": mime_type,
         "size_bytes": int(size_bytes),
         "priority": int(request.priority),
+        "llm_profile": request.llm_profile,
     }
     return ExtractionOutcome(
         result_json=json.dumps(result),
@@ -110,11 +112,14 @@ def _parse_job_request(msg: dict[str, Any]) -> JobRequest:
     raw_filename = msg.get("filename")
     filename = raw_filename if isinstance(raw_filename, str) and raw_filename else "unknown"
     priority = parse_extraction_job_priority(msg)
+    raw_llm_profile = msg.get("llm_profile")
+    llm_profile = raw_llm_profile.strip() if isinstance(raw_llm_profile, str) else ""
     return JobRequest(
         job_id=_require_non_empty_str(msg, "job_id", context="job"),
         filename=filename,
         source_path=_require_non_empty_str(msg, "source_path", context="job"),
         priority=priority,
+        llm_profile=llm_profile,
     )
 
 

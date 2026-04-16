@@ -62,6 +62,17 @@ Open **http://localhost:8080** for the dashboard. From there you can upload docu
 
 **Object storage:** You can also use MinIO and switch the worker to S3-compatible storage.
 
+**LLM embeddings (optional):** Add `worker-llm` for post-extraction embeddings via LiteLLM. Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md` §20](./SPEC.md) for the full protocol.
+
+```bash
+# Docker (Ollama in Docker):
+docker compose -f docker-compose.base.yml -f docker-compose.local.yml \
+  -f docker-compose.llm.yml -f docker-compose.ollama.yml up -d --build
+
+# Dev mode (host Ollama via brew):
+node ./scripts/dev.mjs --llm
+```
+
 <details>
 <summary>Queue payloads</summary>
 
@@ -138,8 +149,9 @@ pnpm -C ui install
 docrunr/
 ├── core/           # docrunr on PyPI (CLI + library)
 ├── worker/         # docrunr-worker (RabbitMQ, HTTP, bundled UI assets)
+├── worker-llm/     # docrunr-worker-llm (optional LLM post-processing)
 ├── ui/             # React + Mantine; Vite in dev, static bundle in the image
-├── tests/          # core, worker, integration, samples
+├── tests/          # core, worker, worker_llm, integration, samples
 └── scripts/        # release and dev helpers
 ```
 
@@ -152,6 +164,7 @@ After the clone and `.env` copy above, the commands below install dependencies a
 | `uv sync`                | Install the Python workspace and dev dependencies. |
 | `pnpm -C ui install`     | Install UI dependencies.                           |
 | `node ./scripts/dev.mjs` | Start dev                                          |
+| `node ./scripts/dev.mjs --llm` | Start dev with LLM worker + LiteLLM        |
 
 ### ⌨️ **CLI**
 

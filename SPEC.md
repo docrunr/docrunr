@@ -382,6 +382,10 @@ docrunr/
 │   ├── pyproject.toml
 │   └── src/docrunr_worker/        # Consume jobs, call core, storage I/O, HTTP health/UI, job history
 │
+├── worker-llm/                    # Optional LLM worker package (`docrunr_worker_llm`)
+│   ├── pyproject.toml
+│   └── src/docrunr_worker_llm/    # Consume LLM jobs, call LiteLLM, store embedding artifacts
+│
 ├── ui/                            # Vite + React front end (package name: docrunr-ui)
 │   ├── package.json
 │   ├── vite.config.ts
@@ -398,6 +402,7 @@ docrunr/
 ├── tests/
 │   ├── core/                      # Unit tests for docrunr
 │   ├── worker/                    # Unit tests for docrunr_worker
+│   ├── worker_llm/                # Unit tests for docrunr_worker_llm
 │   ├── integration/               # Opt-in tests (RabbitMQ, storage, upload E2E)
 │   ├── downloads/                 # Runnable package to fetch sample fixtures
 │   └── samples/                   # Test inputs (by format); some files fetched via downloads/
@@ -406,17 +411,21 @@ docrunr/
 ├── .github/workflows/             # ci.yml, release.yml
 │
 ├── Dockerfile                     # Single image for CLI + worker
+├── Dockerfile.llm                 # LLM worker image
 ├── docker-compose.yml             # Includes base + local (default `docker compose up`)
 ├── docker-compose.base.yml        # Worker + RabbitMQ core stack
-├── docker-compose.minio.yml       # MinIO storage overlay
 ├── docker-compose.local.yml       # Local bind mounts and dev-oriented defaults
+├── docker-compose.minio.yml       # MinIO storage overlay
+├── docker-compose.llm.yml         # LiteLLM proxy + worker-llm overlay
+├── docker-compose.ollama.yml      # Ollama in Docker (when not on host)
+├── litellm.yaml                   # LiteLLM proxy model config
 ├── .env.example
 ├── README.md
 ├── SPEC.md
 └── assets/                        # Optional repo-level branding (often empty; UI assets live under ui/src/assets/)
 ```
 
-Two Python packages in one uv workspace, plus the web UI. One repo. Responsibilities stay scoped to their package; internal file layout is an implementation detail.
+Three Python packages in one uv workspace, plus the web UI. One repo. Responsibilities stay scoped to their package; internal file layout is an implementation detail.
 
 ---
 
@@ -515,7 +524,91 @@ Consumers must be prepared for duplicate messages and duplicate processing. Hand
 
 ---
 
-## 20. Shared Storage
+## 20. LLM Worker (Optional)
+
+`worker-llm` is an optional sibling service that adds LLM-powered post-processing (embeddings, future insights) without changing core extraction guarantees. It runs after extraction and consumes from its own queue set.
+
+### How it works
+
+1. A job published to `docrunr.jobs` includes an optional `llm_profile` field.
+2. The extraction worker processes the file normally.
+3. On success, if `llm_profile` is non-empty, the extraction worker publishes a follow-up message to `docrunr.llm.jobs`.
+4. `worker-llm` reads the chunk JSON from shared storage, calls LiteLLM, writes an embedding artifact, and publishes the result to `docrunr.llm.results`.
+
+When `llm_profile` is absent or empty, the extraction worker behaves exactly as before. No LLM calls, no follow-up messages.
+
+### `llm_profile`
+
+`llm_profile` is the exact LiteLLM `model_name` — no remapping is done inside `worker-llm`. Supported profiles are limited to what the LiteLLM proxy is configured to expose. Example: if LiteLLM exposes `model_name: embed-local`, the job payload sends `"llm_profile": "embed-local"`.
+
+LiteLLM proxy config lives in `litellm.yaml` at the repo root.
+
+### Queues
+
+| Queue                | Direction                | Purpose              |
+| -------------------- | ------------------------ | -------------------- |
+| `docrunr.llm.jobs`   | Extraction → worker-llm  | LLM job intake       |
+| `docrunr.llm.results`| worker-llm → Web app     | LLM job outcomes     |
+| `docrunr.llm.dlq`    | worker-llm → Operator    | Dead-lettered failures |
+
+All queues are durable with `delivery_mode=2`. Same retry and dead-letter semantics as the extraction worker.
+
+### LLM Job Message
+
+Published by the extraction worker to `docrunr.llm.jobs` on successful extraction when `llm_profile` is present:
+
+```json
+{
+  "job_id": "new-uuid",
+  "extract_job_id": "original-extraction-uuid",
+  "filename": "report.pdf",
+  "source_path": "input/2026/04/15/00/original-uuid.pdf",
+  "chunks_path": "output/2026/04/15/00/original-uuid.json",
+  "llm_profile": "embed-local",
+  "priority": 0,
+  "metadata": {}
+}
+```
+
+### LLM Result Message
+
+Published by `worker-llm` to `docrunr.llm.results`:
+
+```json
+{
+  "job_id": "new-uuid",
+  "extract_job_id": "original-extraction-uuid",
+  "status": "ok",
+  "filename": "report.pdf",
+  "source_path": "input/…/….pdf",
+  "chunks_path": "output/…/….json",
+  "llm_profile": "embed-local",
+  "provider": "ollama",
+  "chunk_count": 12,
+  "vector_count": 12,
+  "duration_seconds": 3.41,
+  "artifact_path": "output/…/….embeddings.json",
+  "error": null
+}
+```
+
+### Configuration
+
+| Variable                   | Default                          | Description                |
+| -------------------------- | -------------------------------- | -------------------------- |
+| `LITELLM_BASE_URL`         | `http://localhost:4000`          | LiteLLM proxy base URL     |
+| `LITELLM_API_KEY`          | _(empty)_                        | API key for LiteLLM        |
+| `LITELLM_TIMEOUT_SECONDS`  | `120`                            | Timeout per LiteLLM call   |
+| `RABBITMQ_LLM_QUEUE`       | `docrunr.llm.jobs`              | Consume queue              |
+| `RABBITMQ_LLM_RESULT_QUEUE`| `docrunr.llm.results`           | Result queue               |
+| `RABBITMQ_LLM_DLQ_QUEUE`   | `docrunr.llm.dlq`              | Dead-letter queue          |
+| `HEALTH_PORT`               | `8081`                          | Health/API port            |
+
+All RabbitMQ and storage variables from the extraction worker are also supported.
+
+---
+
+## 21. Shared Storage
 
 The worker and web app communicate files through shared storage. Two backends are supported:
 
@@ -553,7 +646,7 @@ Files use **time-partitioned, UUID-named paths** to prevent collisions and keep 
 
 ---
 
-## 21. Configuration
+## 22. Configuration
 
 All worker settings are environment variables. No config files. No CLI flags.
 
@@ -580,7 +673,7 @@ All worker settings are environment variables. No config files. No CLI flags.
 
 ---
 
-## 22. Health and Stats
+## 23. Health and Stats
 
 The worker runs a minimal HTTP server on `HEALTH_PORT` (default 8080) for liveness checks and operational visibility.
 
@@ -634,7 +727,7 @@ The health server uses Python's stdlib `http.server`. No framework. No external 
 
 ---
 
-## 23. Future Considerations
+## 24. Future Considerations
 
 These may be added later. They must not increase CLI complexity.
 
@@ -648,7 +741,7 @@ These may be added later. They must not increase CLI complexity.
 
 ---
 
-## 24. Success Criteria
+## 25. Success Criteria
 
 DocRunr succeeds when:
 

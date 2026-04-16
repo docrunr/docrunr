@@ -1,0 +1,67 @@
+# Optional LLM worker overlay. Combine with base + local (or minio):
+#   docker compose -f docker-compose.base.yml -f docker-compose.local.yml -f docker-compose.llm.yml up
+#
+# LiteLLM defaults to host Ollama (host.docker.internal:11434).
+# For Docker-hosted Ollama, layer docker-compose.ollama.yml on top.
+
+services:
+  litellm:
+    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-latest}
+    restart: unless-stopped
+    volumes:
+      - ./litellm.yaml:/app/config.yaml:ro
+    environment:
+      OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://host.docker.internal:11434}
+    ports:
+      - "${LITELLM_PORT:-4000}:4000"
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  worker-llm:
+    image: ${DOCRUNR_LLM_IMAGE:-docrunr-worker-llm:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.llm
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_LLM_QUEUE: ${RABBITMQ_LLM_QUEUE:-docrunr.llm.jobs}
+      RABBITMQ_LLM_RESULT_QUEUE: ${RABBITMQ_LLM_RESULT_QUEUE:-docrunr.llm.results}
+      RABBITMQ_LLM_DLQ_QUEUE: ${RABBITMQ_LLM_DLQ_QUEUE:-docrunr.llm.dlq}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/data}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_SECURE: ${MINIO_SECURE}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+      LITELLM_TIMEOUT_SECONDS: ${LITELLM_TIMEOUT_SECONDS:-120}
+      JOB_TIMEOUT_SECONDS: ${LLM_JOB_TIMEOUT_SECONDS:-300}
+      WORKER_CONCURRENCY: ${LLM_WORKER_CONCURRENCY:-1}
+      HEALTH_PORT: ${LLM_HEALTH_PORT:-8081}
+      SQLITE_BASE_PATH: ${SQLITE_BASE_PATH:-/db}
+      UI_PASSWORD: ${UI_PASSWORD:-}
+    volumes:
+      - ./.data:/data
+      - worker-llm-db:/db
+    ports:
+      - "${LLM_HEALTH_PORT:-8081}:${LLM_HEALTH_PORT:-8081}"
+
+volumes:
+  worker-llm-db:
+    name: docrunr-worker-llm-db

@@ -1,4 +1,4 @@
-"""Environment-based configuration for the DocRunr worker."""
+"""Environment-based configuration for the DocRunr LLM worker."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class StorageType(StrEnum):
     MINIO = "minio"
 
 
-class WorkerSettings(BaseSettings):
+class LlmWorkerSettings(BaseSettings):
     model_config = {"env_prefix": "", "case_sensitive": False}
 
     # RabbitMQ
@@ -21,16 +21,13 @@ class WorkerSettings(BaseSettings):
     rabbitmq_port: int = 5672
     rabbitmq_user: str = "guest"
     rabbitmq_password: str = "guest"
-    rabbitmq_queue: str = "docrunr.jobs"
-    rabbitmq_result_queue: str = "docrunr.results"
-    rabbitmq_dlq_queue: str = "docrunr.dlq"
     rabbitmq_llm_queue: str = "docrunr.llm.jobs"
-    #: TCP/AMQP handshake timeout for ``/api/overview`` broker liveness (seconds).
+    rabbitmq_llm_result_queue: str = "docrunr.llm.results"
+    rabbitmq_llm_dlq_queue: str = "docrunr.llm.dlq"
     rabbitmq_health_probe_timeout_seconds: float = Field(default=2.0, ge=0.5, le=30.0)
-    #: Reuse probe result; default > UI poll interval (4s) so steady-state polls hit cache.
     rabbitmq_health_probe_cache_seconds: float = Field(default=5.0, ge=0.0, le=60.0)
 
-    # Storage
+    # Storage (reads chunks written by extraction worker)
     storage_type: StorageType = StorageType.LOCAL
     storage_base_path: str = "/data"
 
@@ -41,15 +38,20 @@ class WorkerSettings(BaseSettings):
     minio_bucket: str = "docrunr"
     minio_secure: bool = False
 
+    # LiteLLM
+    litellm_base_url: str = "http://localhost:4000"
+    litellm_api_key: str = ""
+    litellm_timeout_seconds: int = 120
+
     # Worker behaviour
-    job_timeout_seconds: int = 120
+    job_timeout_seconds: int = 300
     worker_concurrency: int = Field(default=1, ge=1, le=32)
 
     # Health endpoint
-    health_port: int = 8080
+    health_port: int = 8081
     sqlite_base_path: str = "/db"
 
-    # Optional UI / HTTP API gate (same port as health). Empty password = disabled.
+    # Optional UI / HTTP API gate
     ui_password: str = ""
 
     @property
@@ -58,7 +60,7 @@ class WorkerSettings(BaseSettings):
 
     @property
     def consumed_queues(self) -> tuple[str, ...]:
-        return (self.rabbitmq_queue,)
+        return (self.rabbitmq_llm_queue,)
 
 
-settings = WorkerSettings()
+settings = LlmWorkerSettings()

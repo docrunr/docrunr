@@ -193,6 +193,53 @@ class Consumer:
         elif status == "error":
             stats.record_failure()
 
+    def _maybe_publish_llm_followup(
+        self,
+        channel: BlockingChannel,
+        outcome: ExtractionOutcome,
+    ) -> None:
+        """Publish a follow-up LLM job when extraction succeeded and llm_profile is present."""
+        parsed = self._result_payload(outcome)
+        if parsed is None or outcome.status != "ok":
+            return
+        llm_profile = parsed.get("llm_profile")
+        if not isinstance(llm_profile, str) or not llm_profile.strip():
+            return
+
+        chunks_path = parsed.get("chunks_path")
+        if not isinstance(chunks_path, str) or not chunks_path.strip():
+            logger.warning("Skipping LLM follow-up: no chunks_path in extraction result")
+            return
+
+        llm_job: dict[str, Any] = {
+            "job_id": str(uuid.uuid4()),
+            "extract_job_id": str(parsed.get("job_id", "")),
+            "filename": str(parsed.get("filename", "unknown")),
+            "source_path": str(parsed.get("source_path", "")),
+            "chunks_path": chunks_path,
+            "llm_profile": llm_profile.strip(),
+            "priority": int(parsed.get("priority", 0) or 0),
+            "metadata": {},
+        }
+        llm_payload = json.dumps(llm_job, separators=(",", ":")).encode()
+        llm_queue = self._settings.rabbitmq_llm_queue
+        try:
+            channel.queue_declare(queue=llm_queue, durable=True)
+            channel.basic_publish(
+                exchange="",
+                routing_key=llm_queue,
+                body=llm_payload,
+                properties=pika.BasicProperties(delivery_mode=2),
+            )
+            logger.info(
+                "Published LLM follow-up for job %s to %s (profile=%s)",
+                parsed.get("job_id"),
+                llm_queue,
+                llm_profile,
+            )
+        except Exception:
+            logger.exception("Failed to publish LLM follow-up to %s", llm_queue)
+
     def _complete_delivery(
         self,
         channel: BlockingChannel,
@@ -207,6 +254,7 @@ class Consumer:
             queue_name=self._settings.rabbitmq_result_queue,
             payload_json=outcome.result_json,
         )
+        self._maybe_publish_llm_followup(channel, outcome)
         try:
             self._apply_stats_from_outcome(outcome)
             parsed_outcome = self._result_payload(outcome)

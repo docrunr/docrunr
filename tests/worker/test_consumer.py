@@ -314,3 +314,168 @@ def test_parallel_extraction_completes_two_jobs_and_acks_independent_of_order() 
         {"job_id": "job-1", "status": "ok", "duration_seconds": 1.0},
     ]
     assert sum(1 for c in record_job.call_args_list if c.args[0].get("status") == "processing") == 2
+
+
+# --- LLM follow-up publish tests ---
+
+
+def _outcome_with_llm(
+    *,
+    job_id: str = "job-1",
+    status: str = "ok",
+    duration_seconds: float = 1.25,
+    llm_profile: str = "embed-local",
+    chunks_path: str = "output/2026/04/15/00/job-1.json",
+    filename: str = "test.pdf",
+    source_path: str = "input/2026/04/15/00/test.pdf",
+    priority: int = 0,
+) -> ExtractionOutcome:
+    result: dict[str, object] = {
+        "job_id": job_id,
+        "status": status,
+        "duration_seconds": duration_seconds,
+        "filename": filename,
+        "source_path": source_path,
+        "chunks_path": chunks_path,
+        "llm_profile": llm_profile,
+        "priority": priority,
+    }
+    import json
+
+    return ExtractionOutcome(
+        result_json=json.dumps(result),
+        result=result,
+        status=status,
+        duration_seconds=duration_seconds,
+    )
+
+
+def test_llm_followup_published_on_success_with_llm_profile() -> None:
+    consumer = _consumer()
+    channel = Mock()
+    method = SimpleNamespace(delivery_tag=50, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job"),
+        patch("docrunr_worker.consumer.stats.record_success"),
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome_with_llm(llm_profile="embed-local"),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/15/00/test.pdf"}',
+        )
+
+    publishes = channel.basic_publish.call_args_list
+    assert len(publishes) == 2
+    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
+    assert publishes[1].kwargs["routing_key"] == "docrunr.llm.jobs"
+    import json
+
+    llm_body = json.loads(publishes[1].kwargs["body"])
+    assert llm_body["extract_job_id"] == "job-1"
+    assert llm_body["llm_profile"] == "embed-local"
+    assert llm_body["chunks_path"] == "output/2026/04/15/00/job-1.json"
+    assert "job_id" in llm_body
+    assert llm_body["job_id"] != "job-1"
+    channel.queue_declare.assert_any_call(queue="docrunr.llm.jobs", durable=True)
+    channel.basic_ack.assert_called_once_with(delivery_tag=50)
+
+
+def test_no_llm_followup_when_llm_profile_absent() -> None:
+    consumer = _consumer()
+    channel = Mock()
+    method = SimpleNamespace(delivery_tag=51, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job"),
+        patch("docrunr_worker.consumer.stats.record_success"),
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome_with_llm(llm_profile=""),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/15/00/test.pdf"}',
+        )
+
+    publishes = channel.basic_publish.call_args_list
+    assert len(publishes) == 1
+    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
+    channel.basic_ack.assert_called_once_with(delivery_tag=51)
+
+
+def test_no_llm_followup_when_extraction_fails() -> None:
+    consumer = _consumer()
+    channel = Mock()
+    method = SimpleNamespace(delivery_tag=52, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job"),
+        patch("docrunr_worker.consumer.stats.record_failure"),
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome_with_llm(
+                status="error",
+                llm_profile="embed-local",
+            ),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/15/00/test.pdf"}',
+        )
+
+    publishes = channel.basic_publish.call_args_list
+    assert len(publishes) == 1
+    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
+    channel.basic_ack.assert_called_once_with(delivery_tag=52)
+
+
+def test_llm_followup_failure_does_not_block_extraction_ack() -> None:
+    """If LLM follow-up publish fails, extraction result should still be acked."""
+    consumer = _consumer()
+    channel = Mock()
+    call_count = [0]
+    original_publish = channel.basic_publish
+
+    def selective_publish(**kwargs: object) -> None:
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return original_publish(**kwargs)
+        if str(kwargs.get("routing_key", "")) == "docrunr.llm.jobs":
+            raise RuntimeError("LLM queue unavailable")
+        return original_publish(**kwargs)
+
+    channel.basic_publish = Mock(side_effect=selective_publish)
+    method = SimpleNamespace(delivery_tag=53, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job"),
+        patch("docrunr_worker.consumer.stats.record_success"),
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome_with_llm(llm_profile="embed-local"),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/15/00/test.pdf"}',
+        )
+
+    channel.basic_ack.assert_called_once_with(delivery_tag=53)

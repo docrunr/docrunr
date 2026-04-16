@@ -121,6 +121,7 @@ def job_payload_dict(
     *,
     options: dict[str, Any] | None = None,
     priority: object = 0,
+    llm_profile: str = "",
 ) -> dict[str, Any]:
     """Shape published to ``docrunr.jobs`` (matches README contract)."""
     p = validate_extraction_job_priority_value(priority)
@@ -131,6 +132,8 @@ def job_payload_dict(
         "options": options if options is not None else {},
         "priority": p,
     }
+    if llm_profile:
+        payload["llm_profile"] = llm_profile
     return payload
 
 
@@ -141,6 +144,7 @@ def job_payload_bytes(
     *,
     options: dict[str, Any] | None = None,
     priority: object = 0,
+    llm_profile: str = "",
 ) -> bytes:
     return json.dumps(
         job_payload_dict(
@@ -149,6 +153,7 @@ def job_payload_bytes(
             source_path,
             options=options,
             priority=priority,
+            llm_profile=llm_profile,
         ),
         separators=(",", ":"),
     ).encode()

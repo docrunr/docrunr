@@ -1,0 +1,60 @@
+# DocRunr Worker LLM — optional embedding/LLM post-processing worker
+# Usage:
+#   docker build -f Dockerfile.llm -t docrunr-worker-llm .
+#   docker run docrunr-worker-llm
+
+FROM python:3.13-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Copy workspace root (lockfile + workspace definition)
+COPY pyproject.toml uv.lock ./
+
+# Copy all member pyproject.toml files for dependency resolution
+COPY core/pyproject.toml ./core/
+COPY worker/pyproject.toml ./worker/
+COPY worker-llm/pyproject.toml ./worker-llm/
+
+# Install worker-llm dependencies (not core heavy ML deps — just litellm + storage + queue)
+RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-worker-llm
+
+# Copy worker-llm source and install
+COPY worker-llm/src/ ./worker-llm/src/
+RUN uv sync --frozen --no-dev --package docrunr-worker-llm
+
+# Runtime
+FROM python:3.13-slim AS runtime
+
+LABEL org.opencontainers.image.title="DocRunr Worker LLM"
+LABEL org.opencontainers.image.description="Optional LLM post-processing worker for DocRunr"
+LABEL org.opencontainers.image.source="https://github.com/docrunr/docrunr"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+RUN groupadd --gid 1000 docrunr \
+    && useradd --uid 1000 --gid docrunr --shell /bin/bash --create-home docrunr
+
+WORKDIR /app
+
+COPY --from=builder --chown=docrunr:docrunr /app/.venv /app/.venv
+COPY --from=builder --chown=docrunr:docrunr /app/worker-llm/src /app/worker-llm/src
+
+RUN mkdir -p /data /db \
+    && chown -R docrunr:docrunr /data /db
+
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV HEALTH_PORT=8081
+
+USER docrunr
+
+RUN python -c "import docrunr_worker_llm; print('DocRunr Worker LLM loaded')"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import os, urllib.request; p=os.environ.get('HEALTH_PORT', '8081'); urllib.request.urlopen(f'http://localhost:{p}/health')" || exit 1
+
+EXPOSE 8081
+
+ENTRYPOINT ["docrunr-worker-llm"]

@@ -18,6 +18,9 @@ from pika.adapters.blocking_connection import BlockingChannel
 
 DEFAULT_JOBS_QUEUE = "docrunr.jobs"
 DEFAULT_RESULTS_QUEUE = "docrunr.results"
+DEFAULT_LLM_JOBS_QUEUE = "docrunr.llm.jobs"
+DEFAULT_LLM_RESULTS_QUEUE = "docrunr.llm.results"
+DEFAULT_LLM_DLQ_QUEUE = "docrunr.llm.dlq"
 
 
 def rabbitmq_params(timeout_sec: float = 3.0) -> pika.ConnectionParameters:
@@ -54,6 +57,15 @@ def try_worker_health(url: str | None = None, timeout_sec: float = 2.0) -> bool:
         return False
 
 
+def try_worker_llm_health(url: str | None = None, timeout_sec: float = 2.0) -> bool:
+    u = url or os.environ.get("DOCRUNR_LLM_HEALTH_URL", "http://127.0.0.1:8081/health")
+    try:
+        with urllib.request.urlopen(u, timeout=timeout_sec) as resp:
+            return int(resp.status) == 200
+    except (urllib.error.URLError, OSError):
+        return False
+
+
 def open_channel() -> tuple[pika.BlockingConnection, BlockingChannel]:
     conn = pika.BlockingConnection(rabbitmq_params())
     ch = conn.channel()
@@ -83,15 +95,41 @@ def purge_queues(
     ch.queue_purge(results_queue)
 
 
+def declare_llm_queues(
+    ch: BlockingChannel,
+    llm_jobs_queue: str = DEFAULT_LLM_JOBS_QUEUE,
+    llm_results_queue: str = DEFAULT_LLM_RESULTS_QUEUE,
+    llm_dlq_queue: str = DEFAULT_LLM_DLQ_QUEUE,
+) -> None:
+    ch.queue_declare(queue=llm_jobs_queue, durable=True)
+    ch.queue_declare(queue=llm_results_queue, durable=True)
+    ch.queue_declare(queue=llm_dlq_queue, durable=True)
+
+
+def purge_llm_queues(
+    ch: BlockingChannel,
+    llm_jobs_queue: str = DEFAULT_LLM_JOBS_QUEUE,
+    llm_results_queue: str = DEFAULT_LLM_RESULTS_QUEUE,
+    llm_dlq_queue: str = DEFAULT_LLM_DLQ_QUEUE,
+) -> None:
+    """Clear LLM queues (local integration only)."""
+    ch.queue_purge(llm_jobs_queue)
+    ch.queue_purge(llm_results_queue)
+    ch.queue_purge(llm_dlq_queue)
+
+
 def job_message_bytes(
     job_id: str,
     filename: str,
     source_path: str,
     *,
     priority: int = 0,
+    llm_profile: str = "",
 ) -> bytes:
     """Serialize the job body published to ``docrunr.jobs`` (see SPEC.md)."""
-    return job_payload_bytes(job_id, filename, source_path, priority=priority)
+    return job_payload_bytes(
+        job_id, filename, source_path, priority=priority, llm_profile=llm_profile
+    )
 
 
 def publish_job(
@@ -114,13 +152,18 @@ def collect_results_for(
     expected_ids: set[str],
     *,
     results_queue: str = DEFAULT_RESULTS_QUEUE,
+    id_field: str = "job_id",
     timeout_sec: float = 600.0,
     poll_interval_sec: float = 0.25,
 ) -> dict[str, dict[str, Any]]:
     """Drain ``results_queue`` until all ``expected_ids`` are seen or timeout.
 
-    Unknown result messages are acknowledged and ignored so they cannot block queue progress
-    for this test run.
+    Results are keyed by ``id_field`` (default ``job_id``).  Use
+    ``id_field="extract_job_id"`` for LLM results so they key back to the
+    originating extraction job.
+
+    Unknown result messages are acknowledged and ignored so they cannot block
+    queue progress for this test run.
     """
     results: dict[str, dict[str, Any]] = {}
     deadline = time.monotonic() + timeout_sec
@@ -131,7 +174,7 @@ def collect_results_for(
             continue
         try:
             data = json.loads(body.decode())
-            jid = str(data.get("job_id", ""))
+            jid = str(data.get(id_field, ""))
             if jid in expected_ids:
                 results[jid] = data
             ch.basic_ack(method.delivery_tag)
