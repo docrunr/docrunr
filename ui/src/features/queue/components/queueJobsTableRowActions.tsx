@@ -4,11 +4,20 @@ import { ActionIcon, Group, Tooltip } from '@mantine/core';
 import { IconAlertCircle, IconJson, IconMarkdown } from '@tabler/icons-react';
 import type { AnyJob } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
-import { getQueueRowActions, isLlmJob, queueRowActionKey, type QueueRowAction } from './queueJobRowActions';
+import {
+  getQueueRowActions,
+  isLlmJob,
+  queueRowActionKey,
+  type QueueRowAction,
+} from './queueJobRowActions';
 
 const rowActionIconProps = { size: 16, stroke: 1.8 } as const;
 
-function actionLabel(action: QueueRowAction, t: ReturnType<typeof useTranslation>['t'], llm: boolean): string {
+function actionLabel(
+  action: QueueRowAction,
+  t: ReturnType<typeof useTranslation>['t'],
+  llm: boolean
+): string {
   switch (action.kind) {
     case 'markdown':
       return t('table.openMarkdown');

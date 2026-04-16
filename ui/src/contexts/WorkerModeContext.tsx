@@ -1,12 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import type { WorkerMode } from '../services/workerApi.types';
 
-type WorkerModeContextValue = {
-  mode: WorkerMode;
-  setMode: (mode: WorkerMode) => void;
-  isToggleable: boolean;
-};
+import { WorkerModeContext, type WorkerModeContextValue } from './WorkerModeContextState';
 
 const STORAGE_KEY = 'docrunr.workerMode';
 
@@ -38,12 +34,6 @@ function writeStoredMode(mode: WorkerMode): void {
   }
 }
 
-const WorkerModeContext = createContext<WorkerModeContextValue>({
-  mode: 'txt',
-  setMode: () => {},
-  isToggleable: false,
-});
-
 export function WorkerModeProvider({ children }: { children: ReactNode }) {
   const envMode = useMemo(readEnvMode, []);
   const isToggleable = envMode === null;
@@ -66,8 +56,4 @@ export function WorkerModeProvider({ children }: { children: ReactNode }) {
   );
 
   return <WorkerModeContext.Provider value={value}>{children}</WorkerModeContext.Provider>;
-}
-
-export function useWorkerMode(): WorkerModeContextValue {
-  return useContext(WorkerModeContext);
 }

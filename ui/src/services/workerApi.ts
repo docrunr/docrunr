@@ -24,8 +24,7 @@ function modeApiUrl(
   mode: WorkerMode,
   params?: Record<string, string | number | undefined>
 ): string {
-  const prefix =
-    mode === 'llm' && !import.meta.env.VITE_WORKER_MODE ? '/llm-api' : '/api';
+  const prefix = mode === 'llm' && !import.meta.env.VITE_WORKER_MODE ? '/llm-api' : '/api';
   const url = new URL(`${prefix}${path}`, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

@@ -23,7 +23,7 @@ import {
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LangFlag } from '../components/flags/LangFlag';
-import { useWorkerMode } from '../contexts/WorkerModeContext';
+import { useWorkerMode } from '../contexts/useWorkerMode';
 import { LANG_STORAGE_KEY, SUPPORTED_LANGS, type UiLanguage } from '../i18n';
 import { ProcessingOverview } from '../features/overview/components/ProcessingOverview';
 import { QueueJobsTable } from '../features/queue/components/QueueJobsTable';

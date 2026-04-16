@@ -1,9 +1,5 @@
 import { ActionIcon, AppShell, Stack, Tooltip } from '@mantine/core';
-import {
-  IconFileDescription,
-  IconInfoCircle,
-  IconLayoutDashboard,
-} from '@tabler/icons-react';
+import { IconFileDescription, IconInfoCircle, IconLayoutDashboard } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

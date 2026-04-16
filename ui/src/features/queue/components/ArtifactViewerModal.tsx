@@ -245,16 +245,13 @@ function vectorsStateFromParsedRoot(parsed: unknown): VectorsTabState {
     return { kind: 'empty' };
   }
   const dims =
-    typeof root.dimensions === 'number' && Number.isFinite(root.dimensions)
-      ? root.dimensions
-      : 0;
+    typeof root.dimensions === 'number' && Number.isFinite(root.dimensions) ? root.dimensions : 0;
   const embeddings: ArtifactEmbedding[] = rawEmbeddings.map((item, i) => {
     const o =
       item !== null && typeof item === 'object' && !Array.isArray(item)
         ? (item as Record<string, unknown>)
         : {};
-    const index =
-      typeof o.index === 'number' && Number.isFinite(o.index) ? o.index : i;
+    const index = typeof o.index === 'number' && Number.isFinite(o.index) ? o.index : i;
     const text = typeof o.text === 'string' ? o.text : '';
     const vec = Array.isArray(o.vector) ? o.vector.length : 0;
     return { index, text, dimensions: vec || dims };
@@ -397,7 +394,9 @@ function VectorCard({ embedding }: { embedding: ArtifactEmbedding }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const needsToggle = embedding.text.length > CHUNK_EXCERPT_MAX_CHARS;
-  const excerpt = needsToggle ? `${embedding.text.slice(0, CHUNK_EXCERPT_MAX_CHARS)}…` : embedding.text;
+  const excerpt = needsToggle
+    ? `${embedding.text.slice(0, CHUNK_EXCERPT_MAX_CHARS)}…`
+    : embedding.text;
 
   return (
     <Paper className={styles.chunkCard} withBorder p="sm" radius="md">
@@ -808,7 +807,7 @@ export function ArtifactViewerModal({
     if (host) {
       host.innerHTML = '';
     }
-  }, [opened, path]);
+  }, [opened, path, defaultCardTab]);
 
   useEffect(() => {
     if (!opened || !path) {
@@ -839,7 +838,7 @@ export function ArtifactViewerModal({
       });
 
     return () => ac.abort();
-  }, [opened, path]);
+  }, [opened, path, mode]);
 
   useEffect(() => {
     if (

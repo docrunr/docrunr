@@ -4,7 +4,8 @@ Prerequisites (pick one stack)::
 
     docker compose up -d --build
     docker compose -f docker-compose.base.yml -f docker-compose.local.yml up -d --build
-    docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
+    docker compose -f docker-compose.base.yml -f docker-compose.llm.yml \\
+        -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
 
 Tests run on the host: RabbitMQ on ``127.0.0.1:5672``, worker health on ``8080``.
 Storage assertions use ``DOCRUNR_INTEGRATION_STORAGE`` (``local`` or ``minio``) so they

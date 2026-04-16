@@ -34,7 +34,7 @@ export function getMimeCountsPerTimeBucket(
   range: OverviewTimeRange
 ): Record<string, number>[] {
   return accumulateKeyedCountsPerBucket(jobs, range, (job) =>
-    isWorkerJob(job) ? (job.mime_type?.trim().toLowerCase() || 'unknown') : 'unknown'
+    isWorkerJob(job) ? job.mime_type?.trim().toLowerCase() || 'unknown' : 'unknown'
   );
 }
 
@@ -44,6 +44,6 @@ export function getProfileCountsPerTimeBucket(
   range: OverviewTimeRange
 ): Record<string, number>[] {
   return accumulateKeyedCountsPerBucket(jobs, range, (job) =>
-    isLlmJob(job) ? (job.llm_profile || 'unknown') : 'unknown'
+    isLlmJob(job) ? job.llm_profile || 'unknown' : 'unknown'
   );
 }

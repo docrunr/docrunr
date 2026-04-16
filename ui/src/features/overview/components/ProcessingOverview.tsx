@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TooltipContentProps } from 'recharts';
 import { useWorkerAuth } from '../../../app/useWorkerAuth';
-import { useWorkerMode } from '../../../contexts/WorkerModeContext';
+import { useWorkerMode } from '../../../contexts/useWorkerMode';
 import { usePolling } from '../../../hooks/usePolling';
 import { fetchJobs, fetchOverview } from '../../../services/workerApi';
 import type { AnyJob, LlmJob, WorkerOverview } from '../../../services/workerApi.types';
@@ -308,7 +308,10 @@ export function ProcessingOverview() {
   }, [rangeJobs]);
   const avgTokensInRange = useMemo(() => {
     if (rangeJobs.length === 0) return 0;
-    const total = rangeJobs.reduce((sum, j) => sum + ('total_tokens' in j ? (j.total_tokens as number) : 0), 0);
+    const total = rangeJobs.reduce(
+      (sum, j) => sum + ('total_tokens' in j ? (j.total_tokens as number) : 0),
+      0
+    );
     return total / rangeJobs.length;
   }, [rangeJobs]);
   const avgTokensSparkline = useMemo(
@@ -328,11 +331,7 @@ export function ProcessingOverview() {
     return totalChunksInRange / rangeJobs.length;
   }, [rangeJobs, totalChunksInRange]);
   const totalVectorsInRange = useMemo(
-    () =>
-      rangeJobs.reduce(
-        (sum, j) => sum + (isLlmJob(j) ? j.vector_count : 0),
-        0
-      ),
+    () => rangeJobs.reduce((sum, j) => sum + (isLlmJob(j) ? j.vector_count : 0), 0),
     [rangeJobs]
   );
   const avgVectorsInRange = useMemo(() => {
@@ -348,10 +347,16 @@ export function ProcessingOverview() {
   );
   const avgFileSizeInRange = useMemo(() => {
     const sized = rangeJobs.filter(
-      (j) => 'size_bytes' in j && typeof j.size_bytes === 'number' && Number.isFinite(j.size_bytes) && (j.size_bytes as number) >= 0
+      (j) =>
+        'size_bytes' in j &&
+        typeof j.size_bytes === 'number' &&
+        Number.isFinite(j.size_bytes) &&
+        (j.size_bytes as number) >= 0
     );
     if (sized.length === 0) return null;
-    return sized.reduce((sum, j) => sum + ((j as { size_bytes: number }).size_bytes), 0) / sized.length;
+    return (
+      sized.reduce((sum, j) => sum + (j as { size_bytes: number }).size_bytes, 0) / sized.length
+    );
   }, [rangeJobs]);
   const avgFileSizeSparkline = useMemo(
     () =>
@@ -602,10 +607,7 @@ export function ProcessingOverview() {
         const jobsPromise = canFetchProtected
           ? fetchJobs({ limit: 500 }, mode)
           : Promise.resolve({ items: [], count: 0, total: 0, limit: 500 });
-        const [nextOverview, nextJobs] = await Promise.all([
-          fetchOverview(mode),
-          jobsPromise,
-        ]);
+        const [nextOverview, nextJobs] = await Promise.all([fetchOverview(mode), jobsPromise]);
         if (!isMounted()) return;
 
         setOverview(nextOverview);
@@ -752,14 +754,10 @@ export function ProcessingOverview() {
             <StatCard
               title={t('overview.metricProfile')}
               icon={<IconTag size={16} stroke={1.8} />}
-              value={
-                (() => {
-                  const profiles = new Set(
-                    rangeJobs.filter(isLlmJob).map((j) => j.llm_profile)
-                  );
-                  return profiles.size > 0 ? [...profiles].join(', ') : '—';
-                })()
-              }
+              value={(() => {
+                const profiles = new Set(rangeJobs.filter(isLlmJob).map((j) => j.llm_profile));
+                return profiles.size > 0 ? [...profiles].join(', ') : '—';
+              })()}
               subtitle={avgMetricSubtitle}
               sparklineData={[]}
               sparklineColor={sparklineColor}

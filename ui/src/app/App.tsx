@@ -1,7 +1,8 @@
 import { Center, Loader, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { WorkerModeProvider, useWorkerMode } from '../contexts/WorkerModeContext';
+import { WorkerModeProvider } from '../contexts/WorkerModeContext';
+import { useWorkerMode } from '../contexts/useWorkerMode';
 import { usePolling } from '../hooks/usePolling';
 import { fetchJobs, fetchOverview } from '../services/workerApi';
 import type { AnyJobsResponse } from '../services/workerApi.types';

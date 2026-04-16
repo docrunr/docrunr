@@ -16,7 +16,14 @@ class TestLlmWorkerSettings:
             k: v
             for k, v in os.environ.items()
             if not k.upper().startswith(("RABBITMQ_", "STORAGE_", "MINIO_", "LITELLM_"))
-            and k.upper() not in ("JOB_TIMEOUT_SECONDS", "HEALTH_PORT", "SQLITE_BASE_PATH", "UI_PASSWORD", "WORKER_CONCURRENCY")
+            and k.upper()
+            not in (
+                "JOB_TIMEOUT_SECONDS",
+                "HEALTH_PORT",
+                "SQLITE_BASE_PATH",
+                "UI_PASSWORD",
+                "WORKER_CONCURRENCY",
+            )
         }
         with patch.dict(os.environ, clean, clear=True):
             settings = LlmWorkerSettings()

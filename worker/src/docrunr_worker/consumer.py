@@ -20,7 +20,11 @@ from docrunr_worker.handler import (
     parse_job_request_from_body,
 )
 from docrunr_worker.health import stats
-from docrunr_worker.job_messages import EXTRACTION_JOB_QUEUE_ARGUMENTS
+from docrunr_worker.job_messages import (
+    EXTRACTION_JOB_QUEUE_ARGUMENTS,
+    InvalidJobPriorityError,
+    validate_extraction_job_priority_value,
+)
 from docrunr_worker.job_status import PROCESSING
 from docrunr_worker.rabbitmq_health import invalidate_rabbitmq_health_cache
 
@@ -211,6 +215,11 @@ class Consumer:
             logger.warning("Skipping LLM follow-up: no chunks_path in extraction result")
             return
 
+        try:
+            llm_priority = validate_extraction_job_priority_value(parsed.get("priority"))
+        except InvalidJobPriorityError:
+            llm_priority = 0
+
         llm_job: dict[str, Any] = {
             "job_id": str(uuid.uuid4()),
             "extract_job_id": str(parsed.get("job_id", "")),
@@ -218,7 +227,7 @@ class Consumer:
             "source_path": str(parsed.get("source_path", "")),
             "chunks_path": chunks_path,
             "llm_profile": llm_profile.strip(),
-            "priority": int(parsed.get("priority", 0) or 0),
+            "priority": llm_priority,
             "metadata": {},
         }
         llm_payload = json.dumps(llm_job, separators=(",", ":")).encode()

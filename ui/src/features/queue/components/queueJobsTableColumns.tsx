@@ -114,7 +114,11 @@ function sharedStatusColumnDef(t: TFunction): ColumnDef<AnyJob> {
   return {
     accessorKey: 'status',
     header: t('table.status'),
-    meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
+    meta: {
+      fixedWidthPx: 76,
+      centerContent: true,
+      clipOverflow: true,
+    } satisfies QueueJobsTableColumnMeta,
     cell: ({ getValue }) => statusCell(getValue, t),
   };
 }
@@ -166,7 +170,11 @@ function sharedActionsColumnDef(
     enableSorting: false,
     meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
     cell: ({ row }) => (
-      <QueueJobsTableRowActions job={row.original} onOpenArtifact={onOpenArtifact} onViewError={onViewError} />
+      <QueueJobsTableRowActions
+        job={row.original}
+        onOpenArtifact={onOpenArtifact}
+        onViewError={onViewError}
+      />
     ),
   };
 }
@@ -271,7 +279,10 @@ function buildLlmColumns({
   isTightTable,
   onOpenArtifact,
   onViewError,
-}: Pick<BuildQueueJobsTableColumnsParams, 't' | 'formatFinishedAt' | 'isTightTable' | 'onOpenArtifact' | 'onViewError'>): ColumnDef<LlmJob>[] {
+}: Pick<
+  BuildQueueJobsTableColumnsParams,
+  't' | 'formatFinishedAt' | 'isTightTable' | 'onOpenArtifact' | 'onViewError'
+>): ColumnDef<LlmJob>[] {
   return [
     finishedAtColumnDef(t, formatFinishedAt, isTightTable) as ColumnDef<LlmJob>,
     sharedStatusColumnDef(t) as ColumnDef<LlmJob>,

@@ -5,7 +5,10 @@
  * Usage:
  *   node ./scripts/test.mjs unit [pytest -k filter]
  *   node ./scripts/test.mjs samples <includeGlob>
- *   node ./scripts/test.mjs integration <local|minio|llm> [sampleSource] [sampleCount]
+ *   node ./scripts/test.mjs integration <txt|minio|llm> [sampleSource] [sampleCount]
+ *
+ * Integration modes: ``txt`` runs ``tests/integration`` excluding ``llm_jobs`` (no ``llm_profile`` queue tests).
+ * ``minio`` runs the full integration directory (TXT + LLM e2e). ``llm`` runs only ``test_llm_jobs_e2e.py``.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -57,7 +60,8 @@ function printHelp() {
   console.log(`Usage:
   node ./scripts/test.mjs unit [filter]     filter is passed to pytest -k (default: run all)
   node ./scripts/test.mjs samples <include>
-  node ./scripts/test.mjs integration <local|minio|llm> [sampleSource] [sampleCount]
+  node ./scripts/test.mjs integration <txt|minio|llm> [sampleSource] [sampleCount]
+    txt: integration minus llm_jobs | minio: full integration | llm: LLM e2e only
 `);
 }
 
@@ -97,7 +101,7 @@ function cmdSamples(include) {
 }
 
 /**
- * @param {'local' | 'minio' | 'llm'} mode
+ * @param {'txt' | 'minio' | 'llm'} mode
  * @param {string} [sampleSource]
  * @param {string} [sampleCount]
  */
@@ -111,7 +115,7 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
   const healthPort = env.HEALTH_PORT || '8080';
   env.DOCRUNR_HEALTH_URL = `http://127.0.0.1:${healthPort}/health`;
 
-  if (mode === 'local') {
+  if (mode === 'txt') {
     env.DOCRUNR_INTEGRATION_STORAGE = 'local';
   } else if (mode === 'minio') {
     env.DOCRUNR_INTEGRATION_STORAGE = 'minio';
@@ -121,7 +125,7 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
     env.DOCRUNR_INTEGRATION_STORAGE = 'local';
     env.DOCRUNR_LLM_HEALTH_URL = 'http://127.0.0.1:8081/health';
   } else {
-    console.error(`Unknown integration mode: ${mode} (use local, minio, or llm)`);
+    console.error(`Unknown integration mode: ${mode} (use txt, minio, or llm)`);
     process.exit(1);
   }
 
@@ -129,10 +133,16 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
     env.INTEGRATION_SAMPLE_SOURCE = sampleSource;
   }
 
-  const pytestArgs =
-    mode === 'llm'
-      ? ['pytest', 'tests/integration/test_llm_jobs_e2e.py', '-v', '-s']
-      : ['pytest', 'tests/integration', '-v'];
+  /** @type {string[]} */
+  let pytestArgs;
+  if (mode === 'llm') {
+    pytestArgs = ['pytest', 'tests/integration/test_llm_jobs_e2e.py', '-v', '-s'];
+  } else if (mode === 'txt') {
+    pytestArgs = ['pytest', 'tests/integration', '-v', '-m', 'not llm_jobs'];
+  } else {
+    // minio — full integration suite (TXT paths + LLM e2e when worker-llm is up)
+    pytestArgs = ['pytest', 'tests/integration', '-v'];
+  }
 
   const n = sampleCount?.trim();
   if (n && n !== '0' && n !== '*') {
@@ -168,11 +178,11 @@ async function main() {
   if (command === 'integration') {
     const [mode, sampleSource = 'samples', sampleCount = '5'] = rest;
     if (!mode) {
-      console.error('integration requires a mode: local, minio, or llm');
+      console.error('integration requires a mode: txt, minio, or llm');
       process.exit(1);
     }
     await cmdIntegration(
-      /** @type {'local' | 'minio' | 'llm'} */ (mode),
+      /** @type {'txt' | 'minio' | 'llm'} */ (mode),
       sampleSource,
       sampleCount,
     );

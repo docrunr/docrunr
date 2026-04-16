@@ -32,9 +32,9 @@
       "problemMatcher": []
     },
     {
-      "label": "test:integration",
+      "label": "test:integration:txt",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration local '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
+      "command": "node ./scripts/test.mjs integration txt '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
       "options": {
         "cwd": "${workspaceFolder}"
       },

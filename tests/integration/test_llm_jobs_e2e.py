@@ -38,7 +38,7 @@ from tests.integration.rmq_helpers import (
     try_worker_llm_health,
 )
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.llm_jobs]
 
 LLM_PROFILE = os.environ.get("INTEGRATION_LLM_PROFILE", "embed-local")
 

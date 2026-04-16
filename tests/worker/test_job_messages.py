@@ -59,9 +59,7 @@ def test_job_payload_with_llm_profile_includes_key() -> None:
 
 
 def test_job_payload_bytes_with_llm_profile() -> None:
-    raw = job_payload_bytes(
-        "j1", "f.pdf", "input/j1.pdf", llm_profile="embed-local"
-    )
+    raw = job_payload_bytes("j1", "f.pdf", "input/j1.pdf", llm_profile="embed-local")
     assert b'"llm_profile":"embed-local"' in raw
 
 
