@@ -16,6 +16,7 @@ import 'prismjs/components/prism-markdown';
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-yaml';
+import type { WorkerMode } from '../../../services/workerApi.types';
 import { artifactUrl } from '../../../services/artifact-urls';
 import { workerFetch } from '../../../services/workerApi';
 import styles from './ArtifactViewerModal.module.css';
@@ -39,6 +40,7 @@ type ArtifactViewerModalProps = {
   kind: ArtifactViewerKind;
   path: string;
   filename: string;
+  mode?: WorkerMode;
 };
 
 function escapeHtml(text: string): string {
@@ -110,6 +112,12 @@ type ArtifactChunk = {
   char_count: number;
 };
 
+type ArtifactEmbedding = {
+  index: number;
+  text: string;
+  dimensions: number;
+};
+
 const CHUNK_EXCERPT_MAX_CHARS = 280;
 
 type ChunksTabState =
@@ -119,6 +127,13 @@ type ChunksTabState =
   | { kind: 'empty' }
   | { kind: 'ready'; chunks: ArtifactChunk[] };
 
+type VectorsTabState =
+  | { kind: 'invalid' }
+  | { kind: 'large' }
+  | { kind: 'missing' }
+  | { kind: 'empty' }
+  | { kind: 'ready'; embeddings: ArtifactEmbedding[]; dimensions: number };
+
 type JsonDisplayState = {
   text: string;
   invalid: boolean;
@@ -127,6 +142,7 @@ type JsonDisplayState = {
   /** Shown when the payload is large and left unformatted. */
   largeRaw: boolean;
   chunksState: ChunksTabState;
+  vectorsState: VectorsTabState;
 };
 
 const EMPTY_JSON_DISPLAY: JsonDisplayState = {
@@ -135,6 +151,7 @@ const EMPTY_JSON_DISPLAY: JsonDisplayState = {
   skipHighlight: true,
   largeRaw: false,
   chunksState: { kind: 'invalid' },
+  vectorsState: { kind: 'invalid' },
 };
 
 function normalizeChunkItem(item: unknown, fallbackIndex: number): ArtifactChunk {
@@ -174,6 +191,39 @@ function chunksStateFromParsedRoot(parsed: unknown): ChunksTabState {
   return { kind: 'ready', chunks };
 }
 
+function vectorsStateFromParsedRoot(parsed: unknown): VectorsTabState {
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { kind: 'missing' };
+  }
+  const root = parsed as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(root, 'embeddings')) {
+    return { kind: 'missing' };
+  }
+  const rawEmbeddings = root.embeddings;
+  if (!Array.isArray(rawEmbeddings)) {
+    return { kind: 'missing' };
+  }
+  if (rawEmbeddings.length === 0) {
+    return { kind: 'empty' };
+  }
+  const dims =
+    typeof root.dimensions === 'number' && Number.isFinite(root.dimensions)
+      ? root.dimensions
+      : 0;
+  const embeddings: ArtifactEmbedding[] = rawEmbeddings.map((item, i) => {
+    const o =
+      item !== null && typeof item === 'object' && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+    const index =
+      typeof o.index === 'number' && Number.isFinite(o.index) ? o.index : i;
+    const text = typeof o.text === 'string' ? o.text : '';
+    const vec = Array.isArray(o.vector) ? o.vector.length : 0;
+    return { index, text, dimensions: vec || dims };
+  });
+  return { kind: 'ready', embeddings, dimensions: dims };
+}
+
 function jsonChunksTabLabel(chunksState: ChunksTabState, t: TFunction): string {
   if (chunksState.kind === 'ready') {
     return t('artifactViewer.tabChunksWithCount', { count: chunksState.chunks.length });
@@ -182,6 +232,16 @@ function jsonChunksTabLabel(chunksState: ChunksTabState, t: TFunction): string {
     return t('artifactViewer.tabChunksWithCount', { count: 0 });
   }
   return t('artifactViewer.tabChunks');
+}
+
+function jsonVectorsTabLabel(vectorsState: VectorsTabState, t: TFunction): string {
+  if (vectorsState.kind === 'ready') {
+    return t('artifactViewer.tabVectorsWithCount', { count: vectorsState.embeddings.length });
+  }
+  if (vectorsState.kind === 'empty') {
+    return t('artifactViewer.tabVectorsWithCount', { count: 0 });
+  }
+  return t('artifactViewer.tabVectors');
 }
 
 function artifactDownloadFilename(artifactPath: string, jobFilename: string): string {
@@ -298,6 +358,42 @@ function ChunkCard({ chunk }: { chunk: ArtifactChunk }) {
   );
 }
 
+function VectorCard({ embedding }: { embedding: ArtifactEmbedding }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const needsToggle = embedding.text.length > CHUNK_EXCERPT_MAX_CHARS;
+  const excerpt = needsToggle ? `${embedding.text.slice(0, CHUNK_EXCERPT_MAX_CHARS)}…` : embedding.text;
+
+  return (
+    <Paper className={styles.chunkCard} withBorder p="sm" radius="md">
+      <Stack gap="xs">
+        <Group justify="space-between" align="flex-start" wrap="wrap" gap="xs">
+          <Text size="sm" fw={600}>
+            {t('artifactViewer.vectorIndex', { index: embedding.index })}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {t('artifactViewer.vectorDimensions', { count: embedding.dimensions })}
+          </Text>
+        </Group>
+        {embedding.text ? (
+          <>
+            <div className={expanded ? styles.chunkTextFull : styles.chunkTextExcerpt}>
+              <Text component="pre" size="sm" className={styles.chunkPre}>
+                {expanded ? embedding.text : excerpt}
+              </Text>
+            </div>
+            {needsToggle ? (
+              <Button variant="subtle" size="xs" onClick={() => setExpanded((v) => !v)}>
+                {expanded ? t('artifactViewer.chunkCollapse') : t('artifactViewer.chunkExpand')}
+              </Button>
+            ) : null}
+          </>
+        ) : null}
+      </Stack>
+    </Paper>
+  );
+}
+
 function ModalLoadingRow({ label }: { label: string }) {
   return (
     <Group justify="center" py="xl" style={{ flex: 1, width: '100%' }}>
@@ -315,13 +411,15 @@ export function ArtifactViewerModal({
   kind,
   path,
   filename,
+  mode = 'txt',
 }: ArtifactViewerModalProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<FetchPhase>('idle');
   const [content, setContent] = useState('');
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [markdownTab, setMarkdownTab] = useState('preview');
-  const [jsonTab, setJsonTab] = useState('chunks');
+  const defaultCardTab = mode === 'llm' ? 'vectors' : 'chunks';
+  const [jsonTab, setJsonTab] = useState(defaultCardTab);
   const [markdownPreviewPhase, setMarkdownPreviewPhase] = useState<MarkdownPreviewPhase>('idle');
   const [markdownPreviewHtml, setMarkdownPreviewHtml] = useState('');
   const [jsonDisplay, setJsonDisplay] = useState<JsonDisplayState>(EMPTY_JSON_DISPLAY);
@@ -353,14 +451,14 @@ export function ArtifactViewerModal({
     setContent('');
     setFetchError(null);
     setMarkdownTab('preview');
-    setJsonTab('chunks');
+    setJsonTab(defaultCardTab);
     setJsonDisplay(EMPTY_JSON_DISPLAY);
     setJsonPreparePhase('idle');
     const host = previewHostRef.current;
     if (host) {
       host.innerHTML = '';
     }
-  }, [opened]);
+  }, [opened, defaultCardTab]);
 
   useEffect(() => {
     if (!opened || !path) {
@@ -377,7 +475,7 @@ export function ArtifactViewerModal({
     setJsonDisplay(EMPTY_JSON_DISPLAY);
     setJsonPreparePhase('idle');
     setMarkdownTab('preview');
-    setJsonTab('chunks');
+    setJsonTab(defaultCardTab);
     const host = previewHostRef.current;
     if (host) {
       host.innerHTML = '';
@@ -391,7 +489,7 @@ export function ArtifactViewerModal({
 
     const ac = new AbortController();
 
-    const url = artifactUrl(path);
+    const url = artifactUrl(path, mode);
     workerFetch(url, { signal: ac.signal })
       .then(async (response) => {
         if (!response.ok) {
@@ -520,6 +618,7 @@ export function ArtifactViewerModal({
         skipHighlight: true,
         largeRaw: true,
         chunksState: { kind: 'large' },
+        vectorsState: { kind: 'large' },
       });
       setJsonPreparePhase('ready');
       return () => {
@@ -548,12 +647,14 @@ export function ArtifactViewerModal({
           return;
         }
         const chunksState = chunksStateFromParsedRoot(parsed);
+        const vectorsState = vectorsStateFromParsedRoot(parsed);
         setJsonDisplay({
           text,
           invalid: false,
           skipHighlight: false,
           largeRaw: false,
           chunksState,
+          vectorsState,
         });
       } catch {
         if (!openedRef.current || pathRef.current !== pathAtStart) {
@@ -568,6 +669,7 @@ export function ArtifactViewerModal({
           skipHighlight: false,
           largeRaw: false,
           chunksState: { kind: 'invalid' },
+          vectorsState: { kind: 'invalid' },
         });
         setJsonTab('raw');
       }
@@ -682,7 +784,7 @@ export function ArtifactViewerModal({
     if (kind !== 'json' || !jsonDisplay.invalid) {
       return;
     }
-    if (jsonTab === 'chunks') {
+    if (jsonTab === 'chunks' || jsonTab === 'vectors') {
       setJsonTab('raw');
     }
   }, [kind, jsonDisplay.invalid, jsonTab]);
@@ -690,7 +792,9 @@ export function ArtifactViewerModal({
   const title =
     kind === 'markdown'
       ? t('artifactViewer.titleMarkdown', { filename })
-      : t('artifactViewer.titleJson', { filename });
+      : mode === 'llm'
+        ? t('artifactViewer.titleVectors', { filename })
+        : t('artifactViewer.titleJson', { filename });
 
   const isEmptySuccess = opened && phase === 'success' && !content.trim();
 
@@ -790,11 +894,52 @@ export function ArtifactViewerModal({
       return <ModalLoadingRow label={t('artifactViewer.preparing')} />;
     }
 
+    const isLlm = mode === 'llm';
     const chunksState = jsonDisplay.chunksState;
-    const chunksPanelInner = (() => {
-      if (chunksState.kind === 'invalid') {
+    const vectorsState = jsonDisplay.vectorsState;
+    const cardTabValue = isLlm ? 'vectors' : 'chunks';
+
+    const cardsPanelInner = (() => {
+      if (isLlm) {
+        if (vectorsState.kind === 'invalid') return null;
+        if (vectorsState.kind === 'large') {
+          return (
+            <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+              {t('artifactViewer.vectorsUnavailableLarge')}
+            </Alert>
+          );
+        }
+        if (vectorsState.kind === 'missing') {
+          return (
+            <div className={styles.centered}>
+              <Text size="sm" c="dimmed" ta="center">
+                {t('artifactViewer.vectorsMissing')}
+              </Text>
+            </div>
+          );
+        }
+        if (vectorsState.kind === 'empty') {
+          return (
+            <div className={styles.centered}>
+              <Text size="sm" c="dimmed" ta="center">
+                {t('artifactViewer.vectorsEmpty')}
+              </Text>
+            </div>
+          );
+        }
+        if (vectorsState.kind === 'ready') {
+          return (
+            <div className={styles.chunkListScroll}>
+              {vectorsState.embeddings.map((emb, i) => (
+                <VectorCard key={`${emb.index}-${i}`} embedding={emb} />
+              ))}
+            </div>
+          );
+        }
         return null;
       }
+
+      if (chunksState.kind === 'invalid') return null;
       if (chunksState.kind === 'large') {
         return (
           <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
@@ -832,18 +977,26 @@ export function ArtifactViewerModal({
       return null;
     })();
 
+    const showCardTab = isLlm
+      ? !jsonDisplay.invalid && vectorsState.kind !== 'invalid'
+      : !jsonDisplay.invalid;
+
+    const cardTabLabel = isLlm
+      ? jsonVectorsTabLabel(vectorsState, t)
+      : jsonChunksTabLabel(chunksState, t);
+
     return (
       <Stack gap="md" className={styles.body}>
-        <Tabs value={jsonTab} onChange={(v) => setJsonTab(v ?? 'chunks')}>
+        <Tabs value={jsonTab} onChange={(v) => setJsonTab(v ?? cardTabValue)}>
           <Tabs.List className={styles.tabsList}>
-            {!jsonDisplay.invalid ? (
-              <Tabs.Tab value="chunks">{jsonChunksTabLabel(chunksState, t)}</Tabs.Tab>
+            {showCardTab ? (
+              <Tabs.Tab value={cardTabValue}>{cardTabLabel}</Tabs.Tab>
             ) : null}
             <Tabs.Tab value="raw">{t('artifactViewer.tabRaw')}</Tabs.Tab>
           </Tabs.List>
-          {!jsonDisplay.invalid ? (
-            <Tabs.Panel value="chunks" pt="sm">
-              {chunksPanelInner}
+          {showCardTab ? (
+            <Tabs.Panel value={cardTabValue} pt="sm">
+              {cardsPanelInner}
             </Tabs.Panel>
           ) : null}
           <Tabs.Panel value="raw" pt="sm">

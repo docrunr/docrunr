@@ -1,7 +1,8 @@
 import type {
+  AnyJobsResponse,
   UploadDocumentsResponse,
   WorkerAuthSession,
-  WorkerJobsResponse,
+  WorkerMode,
   WorkerOverview,
 } from './workerApi.types';
 import { notifySessionUnauthorized } from './sessionInvalidate';
@@ -11,20 +12,43 @@ const sameOriginJsonInit: RequestInit = {
   headers: { Accept: 'application/json' },
 };
 
+/**
+ * Build a URL for the given worker mode.
+ *
+ * In dev mode (no VITE_WORKER_MODE), LLM calls go through the Vite
+ * ``/llm-api`` proxy → port 8081.  In Docker each image serves ``/api``
+ * directly on its own origin.
+ */
+function modeApiUrl(
+  path: string,
+  mode: WorkerMode,
+  params?: Record<string, string | number | undefined>
+): string {
+  const prefix =
+    mode === 'llm' && !import.meta.env.VITE_WORKER_MODE ? '/llm-api' : '/api';
+  const url = new URL(`${prefix}${path}`, window.location.origin);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
+  return url.toString();
+}
+
 export function workerApiUrl(
   path: string,
   params?: Record<string, string | number | undefined>
 ): string {
-  const url = new URL(`/api${path}`, window.location.origin);
-  if (!params) {
-    return url.toString();
-  }
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  });
-  return url.toString();
+  return modeApiUrl(path, 'txt', params);
+}
+
+export function llmApiUrl(
+  path: string,
+  params?: Record<string, string | number | undefined>
+): string {
+  return modeApiUrl(path, 'llm', params);
 }
 
 /** Same-origin fetch with session cookies (artifacts, custom calls). */
@@ -95,17 +119,20 @@ export async function logoutWorkerUi(): Promise<void> {
   });
 }
 
-export function fetchOverview(): Promise<WorkerOverview> {
-  return getJson<WorkerOverview>(workerApiUrl('/overview'));
+export function fetchOverview(mode: WorkerMode = 'txt'): Promise<WorkerOverview> {
+  return getJson<WorkerOverview>(modeApiUrl('/overview', mode));
 }
 
-export function fetchJobs(params: {
-  limit?: number;
-  status?: 'ok' | 'error' | 'processing' | '';
-  search?: string;
-}): Promise<WorkerJobsResponse> {
-  return getJson<WorkerJobsResponse>(
-    workerApiUrl('/jobs', {
+export function fetchJobs(
+  params: {
+    limit?: number;
+    status?: 'ok' | 'error' | 'processing' | '';
+    search?: string;
+  },
+  mode: WorkerMode = 'txt'
+): Promise<AnyJobsResponse> {
+  return getJson<AnyJobsResponse>(
+    modeApiUrl('/jobs', mode, {
       limit: params.limit,
       status: params.status,
       search: params.search,

@@ -3,18 +3,19 @@ import { Paper, Stack, Text, useComputedColorScheme } from '@mantine/core';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TooltipContentProps } from 'recharts';
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob, WorkerMode } from '../../../services/workerApi.types';
 import { getTimeBucketSums } from '../../processing/lib/metric-series';
 
 type QueueThroughputChartProps = {
-  jobs: WorkerJob[];
+  jobs: AnyJob[];
+  mode: WorkerMode;
 };
 
-/** Bottom-of-page chart matching the overview CPU sparkline, using processed job counts (7d buckets). */
-export function QueueThroughputChart({ jobs }: QueueThroughputChartProps) {
+export function QueueThroughputChart({ jobs, mode }: QueueThroughputChartProps) {
   const { t } = useTranslation();
   const computedColorScheme = useComputedColorScheme('light');
   const sparklineColor = computedColorScheme === 'dark' ? 'gray.3' : 'gray.7';
+  const tooltipKey = mode === 'llm' ? 'tooltip.embedded' : 'tooltip.processed';
 
   const renderProcessedTooltip = useCallback(
     ({ active, payload }: TooltipContentProps<number, string>) => {
@@ -26,12 +27,12 @@ export function QueueThroughputChart({ jobs }: QueueThroughputChartProps) {
       return (
         <Paper withBorder shadow="md" p="xs" radius="md">
           <Text size="sm" fw={700}>
-            {t('tooltip.processed', { count })}
+            {t(tooltipKey, { count })}
           </Text>
         </Paper>
       );
     },
-    [t]
+    [t, tooltipKey]
   );
 
   const sparkline = useMemo(() => getTimeBucketSums(jobs, '7d', () => 1), [jobs]);

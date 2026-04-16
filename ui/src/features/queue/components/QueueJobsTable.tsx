@@ -17,7 +17,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob, WorkerMode } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
 import { buildQueueJobsTableColumns } from './queueJobsTableColumns';
 import {
@@ -65,10 +65,10 @@ function writeStoredPagination(pagination: PaginationState): void {
 }
 
 type QueueJobsTableProps = {
-  jobs: WorkerJob[];
+  jobs: AnyJob[];
+  mode: WorkerMode;
   isLoading: boolean;
   toolbarStart?: ReactNode;
-  /** Rendered below the bordered table (or below the loading state), outside the table frame */
   afterTable?: ReactNode;
   error?: ReactNode;
 };
@@ -100,6 +100,7 @@ function formatJobFinishedAt(
 
 export function QueueJobsTable({
   jobs,
+  mode,
   isLoading,
   toolbarStart,
   afterTable,
@@ -118,7 +119,7 @@ export function QueueJobsTable({
 
   const [sorting, setSorting] = useState<SortingState>([{ id: 'sort_time', desc: true }]);
   const [pagination, setPagination] = useState<PaginationState>(readStoredPagination);
-  const [errorModalJob, setErrorModalJob] = useState<WorkerJob | null>(null);
+  const [errorModalJob, setErrorModalJob] = useState<AnyJob | null>(null);
   const [artifactModal, setArtifactModal] = useState<{
     kind: ArtifactViewerKind;
     path: string;
@@ -131,8 +132,17 @@ export function QueueJobsTable({
   const isWide = useMediaQuery('(min-width: 1200px)') ?? true;
   const isTightTable = useMediaQuery('(max-width: 899px)') ?? false;
 
-  const columnVisibility: VisibilityState = useMemo(
-    () => ({
+  const columnVisibility = useMemo((): VisibilityState => {
+    if (mode === 'llm') {
+      return {
+        filename: isMd,
+        llm_profile: isMd,
+        provider: isLg,
+        vector_count: isXl,
+        source_path: isWide,
+      } satisfies VisibilityState;
+    }
+    return {
       filename: isMd,
       size_bytes: isMd,
       priority: isMd,
@@ -140,9 +150,8 @@ export function QueueJobsTable({
       chunk_count: isLg,
       total_tokens: isXl,
       source_path: isWide,
-    }),
-    [isMd, isLg, isXl, isWide]
-  );
+    } satisfies VisibilityState;
+  }, [mode, isMd, isLg, isXl, isWide]);
 
   useEffect(() => {
     writeStoredPagination(pagination);
@@ -171,8 +180,9 @@ export function QueueJobsTable({
         isTightTable,
         onOpenArtifact: (kind, path, j) => setArtifactModal({ kind, path, filename: j.filename }),
         onViewError: setErrorModalJob,
+        mode,
       }),
-    [t, formatFinishedAt, isTightTable]
+    [t, formatFinishedAt, isTightTable, mode]
   );
 
   const table = useReactTable({
@@ -224,6 +234,7 @@ export function QueueJobsTable({
         errorModalJob={errorModalJob}
         onCloseError={() => setErrorModalJob(null)}
         t={t}
+        mode={mode}
       />
 
       <QueueJobsTableToolbar

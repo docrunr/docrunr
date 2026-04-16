@@ -2,18 +2,18 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActionIcon, Group, Tooltip } from '@mantine/core';
 import { IconAlertCircle, IconJson, IconMarkdown } from '@tabler/icons-react';
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
-import { getQueueRowActions, queueRowActionKey, type QueueRowAction } from './queueJobRowActions';
+import { getQueueRowActions, isLlmJob, queueRowActionKey, type QueueRowAction } from './queueJobRowActions';
 
 const rowActionIconProps = { size: 16, stroke: 1.8 } as const;
 
-function actionLabel(action: QueueRowAction, t: ReturnType<typeof useTranslation>['t']): string {
+function actionLabel(action: QueueRowAction, t: ReturnType<typeof useTranslation>['t'], llm: boolean): string {
   switch (action.kind) {
     case 'markdown':
       return t('table.openMarkdown');
     case 'json':
-      return t('table.openChunks');
+      return llm ? t('table.openVectors') : t('table.openChunks');
     case 'error':
       return t('table.viewError');
   }
@@ -24,11 +24,12 @@ export function QueueJobsTableRowActions({
   onOpenArtifact,
   onViewError,
 }: {
-  job: WorkerJob;
-  onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: WorkerJob) => void;
-  onViewError: (job: WorkerJob) => void;
+  job: AnyJob;
+  onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: AnyJob) => void;
+  onViewError: (job: AnyJob) => void;
 }) {
   const { t } = useTranslation();
+  const llm = isLlmJob(job);
   const actions = useMemo(() => getQueueRowActions(job), [job]);
   if (actions.length === 0) {
     return null;
@@ -36,7 +37,7 @@ export function QueueJobsTableRowActions({
   return (
     <Group gap={2} wrap="nowrap" justify="center">
       {actions.map((action) => {
-        const label = actionLabel(action, t);
+        const label = actionLabel(action, t, llm);
         if (action.kind === 'error') {
           return (
             <Tooltip key={queueRowActionKey(action)} label={label}>

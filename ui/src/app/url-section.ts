@@ -10,13 +10,12 @@ export function normalizePathname(pathname: string): string {
 
 export function isKnownAppPath(pathname: string): boolean {
   const p = normalizePathname(pathname);
-  return p === '/' || p === '/queue' || p === '/llm';
+  return p === '/' || p === '/queue';
 }
 
 export function sectionFromPathname(pathname: string): AppSectionId {
   const p = normalizePathname(pathname);
   if (p === '/queue') return 'queue';
-  if (p === '/llm') return 'llm';
   return 'overview';
 }
 
@@ -24,8 +23,6 @@ export function pathFromSection(section: AppSectionId): string {
   switch (section) {
     case 'queue':
       return '/queue';
-    case 'llm':
-      return '/llm';
     default:
       return '/';
   }

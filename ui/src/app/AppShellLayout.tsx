@@ -1,6 +1,5 @@
 import { ActionIcon, AppShell, Stack, Tooltip } from '@mantine/core';
 import {
-  IconBrain,
   IconFileDescription,
   IconInfoCircle,
   IconLayoutDashboard,
@@ -16,7 +15,7 @@ import './App.css';
 type MainNavItem = {
   id: AppSectionId;
   label: string;
-  icon: typeof IconLayoutDashboard | typeof IconFileDescription | typeof IconBrain;
+  icon: typeof IconLayoutDashboard | typeof IconFileDescription;
 };
 
 type NavbarLinkProps = {
@@ -68,7 +67,6 @@ export function AppShellLayout({
     () => [
       { id: 'overview', label: t('nav.overview'), icon: IconLayoutDashboard },
       { id: 'queue', label: t('nav.queue'), icon: IconFileDescription },
-      { id: 'llm', label: t('nav.llm'), icon: IconBrain },
     ],
     [t]
   );

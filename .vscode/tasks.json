@@ -52,7 +52,7 @@
     {
       "label": "test:integration:llm",
       "type": "shell",
-      "command": "set -a; source .env; set +a; export DOCRUNR_INTEGRATION_STORAGE=local; export RABBITMQ_HOST=127.0.0.1; export DOCRUNR_HEALTH_URL=\"http://127.0.0.1:${HEALTH_PORT:-8080}/health\"; export DOCRUNR_LLM_HEALTH_URL=\"http://127.0.0.1:${LLM_HEALTH_PORT:-8081}/health\"; src='${input:integrationSampleSource}'; n='${input:integrationSampleCount}'; cmd='uv run pytest tests/integration/test_llm_jobs_e2e.py -v -s'; if [ -n \"$n\" ] && [ \"$n\" != \"0\" ] && [ \"$n\" != \"*\" ]; then cmd=\"$cmd --integration-sample-limit=$n\"; fi; export INTEGRATION_SAMPLE_SOURCE=\"$src\"; eval $cmd",
+      "command": "set -a; source .env; set +a; export DOCRUNR_INTEGRATION_STORAGE=local; export RABBITMQ_HOST=127.0.0.1; export DOCRUNR_HEALTH_URL=\"http://127.0.0.1:${HEALTH_PORT:-8080}/health\"; export DOCRUNR_LLM_HEALTH_URL=\"http://127.0.0.1:8081/health\"; src='${input:integrationSampleSource}'; n='${input:integrationSampleCount}'; cmd='uv run pytest tests/integration/test_llm_jobs_e2e.py -v -s'; if [ -n \"$n\" ] && [ \"$n\" != \"0\" ] && [ \"$n\" != \"*\" ]; then cmd=\"$cmd --integration-sample-limit=$n\"; fi; export INTEGRATION_SAMPLE_SOURCE=\"$src\"; eval $cmd",
       "group": "test",
       "presentation": {
         "reveal": "always",
@@ -113,18 +113,6 @@
       "label": "dev",
       "type": "shell",
       "command": "node ./scripts/dev.mjs",
-      "group": "none",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "dev:llm",
-      "type": "shell",
-      "command": "node ./scripts/dev.mjs --llm",
       "group": "none",
       "presentation": {
         "reveal": "always",

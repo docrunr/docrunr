@@ -48,7 +48,7 @@ class LlmWorkerSettings(BaseSettings):
     worker_concurrency: int = Field(default=1, ge=1, le=32)
 
     # Health endpoint
-    health_port: int = 8081
+    health_port: int = 8080
     sqlite_base_path: str = "/db"
 
     # Optional UI / HTTP API gate

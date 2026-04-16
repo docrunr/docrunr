@@ -1,3 +1,5 @@
+export type WorkerMode = 'txt' | 'llm';
+
 type WorkerHealth = {
   status: string;
   rabbitmq: string;
@@ -19,18 +21,18 @@ type WorkerCpu = {
   history: number[];
 };
 
+/** Shared overview shape — both workers return the same structure. */
 export type WorkerOverview = {
   health: WorkerHealth;
   stats: WorkerStats;
   cpu: WorkerCpu;
 };
 
-/** Worker / SQLite lifecycle: in-flight vs terminal outcomes */
-type WorkerJobStatus = 'processing' | 'ok' | 'error';
+type JobStatus = 'processing' | 'ok' | 'error';
 
 export type WorkerJob = {
   job_id: string;
-  status: WorkerJobStatus | string;
+  status: JobStatus | string;
   filename: string;
   source_path: string;
   markdown_path: string | null;
@@ -39,17 +41,33 @@ export type WorkerJob = {
   chunk_count: number;
   duration_seconds: number;
   error: string | null;
-  /** When the worker accepted the message from the queue */
   received_at?: string;
   finished_at?: string;
   updated_at?: string;
-  /** IANA media type when known (from conversion pipeline) */
   mime_type?: string;
-  /** Source file size in bytes */
   size_bytes?: number;
-  /** Extraction job priority 0–255 (RabbitMQ native priority) */
   priority?: number;
 };
+
+export type LlmJob = {
+  job_id: string;
+  status: JobStatus | string;
+  filename: string;
+  source_path: string;
+  chunks_path: string;
+  llm_profile: string;
+  provider: string;
+  chunk_count: number;
+  vector_count: number;
+  duration_seconds: number;
+  artifact_path: string | null;
+  error: string | null;
+  received_at?: string;
+  finished_at?: string;
+  updated_at?: string;
+};
+
+export type AnyJob = WorkerJob | LlmJob;
 
 export type WorkerJobsResponse = {
   items: WorkerJob[];
@@ -57,6 +75,15 @@ export type WorkerJobsResponse = {
   total: number;
   limit: number;
 };
+
+export type LlmJobsResponse = {
+  items: LlmJob[];
+  count: number;
+  total: number;
+  limit: number;
+};
+
+export type AnyJobsResponse = WorkerJobsResponse | LlmJobsResponse;
 
 /** POST /api/uploads — per-file enqueue outcome */
 type UploadQueuedItem = {

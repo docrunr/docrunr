@@ -33,7 +33,7 @@ class TestLlmWorkerSettings:
         assert settings.litellm_timeout_seconds == 120
         assert settings.job_timeout_seconds == 300
         assert settings.worker_concurrency == 1
-        assert settings.health_port == 8081
+        assert settings.health_port == 8080
         assert settings.sqlite_base_path == "/db"
         assert settings.ui_password == ""
         assert settings.ui_auth_enabled is False

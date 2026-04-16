@@ -23,16 +23,14 @@ import {
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LangFlag } from '../components/flags/LangFlag';
+import { useWorkerMode } from '../contexts/WorkerModeContext';
 import { LANG_STORAGE_KEY, SUPPORTED_LANGS, type UiLanguage } from '../i18n';
 import { ProcessingOverview } from '../features/overview/components/ProcessingOverview';
 import { QueueJobsTable } from '../features/queue/components/QueueJobsTable';
 import { RabbitmqStatus } from '../features/queue/components/RabbitmqStatus';
 import { QueueThroughputChart } from '../features/queue/components/QueueThroughputChart';
-import { LlmJobsTable } from '../features/llm/components/LlmJobsTable';
-import { LlmOverview } from '../features/llm/components/LlmOverview';
-import { useLlmPolling } from '../features/llm/hooks/useLlmPolling';
 import { UploadModal } from '../features/uploads/components/UploadModal';
-import type { WorkerJobsResponse } from '../services/workerApi.types';
+import type { AnyJobsResponse } from '../services/workerApi.types';
 import { SidebarToggleIcon } from './sidebar-toggle-icon';
 import { useWorkerAuth } from './useWorkerAuth';
 
@@ -51,6 +49,7 @@ export function AppMainToolbar({
 }: AppMainToolbarProps) {
   const { t, i18n } = useTranslation();
   const { canFetchProtected, authEnabled, authenticated, logout } = useWorkerAuth();
+  const { mode, setMode, isToggleable } = useWorkerMode();
   const [uploadOpened, setUploadOpened] = useState(false);
   const sidebarLabel = sidebarOpened ? t('sidebar.hide') : t('sidebar.show');
   const themeLabel = isDarkScheme ? t('theme.switchToLight') : t('theme.switchToDark');
@@ -69,19 +68,32 @@ export function AppMainToolbar({
 
   return (
     <Group justify="space-between" align="center">
-      <Tooltip label={sidebarLabel} position="right" transitionProps={{ duration: 0 }}>
-        <ActionIcon
-          visibleFrom="sm"
-          variant="subtle"
-          color="gray"
-          size="lg"
-          radius="md"
-          aria-label={sidebarLabel}
-          onClick={onToggleSidebar}
-        >
-          <SidebarToggleIcon opened={sidebarOpened} />
-        </ActionIcon>
-      </Tooltip>
+      <Group gap="sm" wrap="nowrap" align="center">
+        <Tooltip label={sidebarLabel} position="right" transitionProps={{ duration: 0 }}>
+          <ActionIcon
+            visibleFrom="sm"
+            variant="subtle"
+            color="gray"
+            size="lg"
+            radius="md"
+            aria-label={sidebarLabel}
+            onClick={onToggleSidebar}
+          >
+            <SidebarToggleIcon opened={sidebarOpened} />
+          </ActionIcon>
+        </Tooltip>
+        {isToggleable && (
+          <SegmentedControl
+            size="xs"
+            data={[
+              { value: 'txt', label: t('mode.txt') },
+              { value: 'llm', label: t('mode.llm') },
+            ]}
+            value={mode}
+            onChange={(v) => setMode(v as 'txt' | 'llm')}
+          />
+        )}
+      </Group>
       <Group gap={6} wrap="nowrap" align="center">
         <Tooltip
           label={uploadBlocked ? t('auth.uploadRequiresLogin') : t('upload.title')}
@@ -189,7 +201,7 @@ export function AppMainToolbar({
 }
 
 type QueueViewProps = {
-  jobs: WorkerJobsResponse;
+  jobs: AnyJobsResponse;
   queueLoading: boolean;
   queueError: string | null;
   queueRabbitmq: string | null;
@@ -210,6 +222,7 @@ function QueueView({
   onQueueStatusFilterChange,
 }: QueueViewProps) {
   const { t } = useTranslation();
+  const { mode } = useWorkerMode();
   return (
     <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
       <Box
@@ -223,6 +236,7 @@ function QueueView({
       >
         <QueueJobsTable
           jobs={jobs.items}
+          mode={mode}
           isLoading={queueLoading && jobs.items.length === 0}
           error={
             queueError ? (
@@ -303,92 +317,16 @@ function QueueView({
           }
         />
       </Box>
-      <QueueThroughputChart jobs={jobs.items} />
+      <QueueThroughputChart jobs={jobs.items} mode={mode} />
     </Stack>
   );
 }
 
-function LlmView({ active }: { active: boolean }) {
-  const { t } = useTranslation();
-  const llm = useLlmPolling(active);
-  return (
-    <Stack gap="md" style={{ flex: 1, minHeight: 0 }}>
-      <LlmOverview overview={llm.overview} loading={llm.loading} />
-      <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Group gap="sm" wrap="nowrap" align="center" mb="sm">
-          <TextInput
-            aria-label={t('llm.searchPlaceholder')}
-            placeholder={t('llm.searchPlaceholder')}
-            value={llm.search}
-            onChange={(e) => llm.setSearch(e.currentTarget.value)}
-            size="xs"
-            style={{ flex: '1 1 200px', minWidth: 0, maxWidth: 280 }}
-          />
-          <SegmentedControl
-            aria-label="Filter by status"
-            size="xs"
-            data={[
-              {
-                value: '',
-                label: (
-                  <Tooltip
-                    label={t('llm.filterAll')}
-                    position="bottom"
-                    transitionProps={{ duration: 0 }}
-                  >
-                    <IconList size={16} stroke={1.8} style={{ display: 'block' }} />
-                  </Tooltip>
-                ),
-              },
-              {
-                value: 'processing',
-                label: (
-                  <Tooltip
-                    label={t('llm.filterProcessing')}
-                    position="bottom"
-                    transitionProps={{ duration: 0 }}
-                  >
-                    <IconLoader2 size={16} stroke={1.8} style={{ display: 'block' }} />
-                  </Tooltip>
-                ),
-              },
-              {
-                value: 'error',
-                label: (
-                  <Tooltip
-                    label={t('llm.filterErrors')}
-                    position="bottom"
-                    transitionProps={{ duration: 0 }}
-                  >
-                    <IconAlertTriangle size={16} stroke={1.8} style={{ display: 'block' }} />
-                  </Tooltip>
-                ),
-              },
-            ]}
-            value={llm.statusFilter}
-            onChange={(v) => llm.setStatusFilter(v as '' | 'ok' | 'error' | 'processing')}
-          />
-          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-            {llm.loading && llm.jobs.items.length === 0
-              ? '…'
-              : t('llm.jobCount', { count: llm.jobs.total })}
-          </Text>
-        </Group>
-        <LlmJobsTable jobs={llm.jobs.items} isLoading={llm.loading} />
-      </Box>
-    </Stack>
-  );
-}
-
-function OverviewView() {
-  return <ProcessingOverview />;
-}
-
-export type AppSectionId = 'overview' | 'queue' | 'llm';
+export type AppSectionId = 'overview' | 'queue';
 
 type AppSectionContentProps = {
   activeSection: AppSectionId;
-  jobs: WorkerJobsResponse;
+  jobs: AnyJobsResponse;
   queueLoading: boolean;
   queueError: string | null;
   queueRabbitmq: string | null;
@@ -423,8 +361,5 @@ export function AppSectionContent({
       />
     );
   }
-  if (activeSection === 'llm') {
-    return <LlmView active />;
-  }
-  return <OverviewView />;
+  return <ProcessingOverview />;
 }

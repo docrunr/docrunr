@@ -14,6 +14,8 @@ RUN npm install -g pnpm@9
 # Semantic version without leading "v" (matches release tag); CI sets this from GITHUB_REF_NAME
 ARG DOCRUNR_VERSION=
 ENV VITE_APP_VERSION=${DOCRUNR_VERSION}
+ARG VITE_WORKER_MODE=txt
+ENV VITE_WORKER_MODE=${VITE_WORKER_MODE}
 
 # Install UI dependencies with lockfile
 COPY ui/package.json ui/pnpm-lock.yaml ./ui/

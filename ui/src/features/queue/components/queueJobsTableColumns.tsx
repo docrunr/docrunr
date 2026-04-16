@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Loader, Text, Tooltip } from '@mantine/core';
 import { type ColumnDef } from '@tanstack/react-table';
 import { FileTypeIcon } from '../../../components/icons/FileTypeIcon';
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob, LlmJob, WorkerJob, WorkerMode } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
 import { QueueJobsTableRowActions } from './queueJobsTableRowActions';
 import { formatDurationSeconds } from '../../../utils/duration';
@@ -30,25 +30,51 @@ export function fixedWidthStyle(px: number): CSSProperties {
   };
 }
 
-function formatNumber(value: number): string {
-  return value.toLocaleString();
+function formatNumber(value: number | null | undefined): string {
+  return value != null ? value.toLocaleString() : '—';
 }
 
 type BuildQueueJobsTableColumnsParams = {
   t: ReturnType<typeof useTranslation>['t'];
   formatFinishedAt: (value: string | undefined) => string;
   isTightTable: boolean;
-  onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: WorkerJob) => void;
-  onViewError: (job: WorkerJob) => void;
+  onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: AnyJob) => void;
+  onViewError: (job: AnyJob) => void;
+  mode: WorkerMode;
 };
 
-export function buildQueueJobsTableColumns({
+function statusCell(getValue: () => unknown, t: ReturnType<typeof useTranslation>['t']) {
+  const status = getValue() as string;
+  if (status === 'processing') {
+    return (
+      <Tooltip label={t('table.processing')}>
+        <Loader size="sm" aria-label={t('table.processing')} />
+      </Tooltip>
+    );
+  }
+  const color = status === 'ok' ? 'teal' : status === 'error' ? 'red' : 'gray';
+  return (
+    <Badge
+      color={color}
+      variant="light"
+      size="sm"
+      styles={{
+        root: { maxWidth: '100%' },
+        label: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      }}
+    >
+      {status}
+    </Badge>
+  );
+}
+
+function buildTxtColumns({
   t,
   formatFinishedAt,
   isTightTable,
   onOpenArtifact,
   onViewError,
-}: BuildQueueJobsTableColumnsParams): ColumnDef<WorkerJob>[] {
+}: Omit<BuildQueueJobsTableColumnsParams, 'mode'>): ColumnDef<WorkerJob>[] {
   return [
     {
       accessorKey: 'mime_type',
@@ -95,11 +121,7 @@ export function buildQueueJobsTableColumns({
             w="100%"
             style={
               isTightTable
-                ? {
-                    whiteSpace: 'normal',
-                    wordBreak: 'break-word',
-                    minWidth: 0,
-                  }
+                ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
                 : {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -116,35 +138,8 @@ export function buildQueueJobsTableColumns({
     {
       accessorKey: 'status',
       header: t('table.status'),
-      meta: {
-        fixedWidthPx: 76,
-        centerContent: true,
-        clipOverflow: true,
-      } satisfies QueueJobsTableColumnMeta,
-      cell: ({ getValue }) => {
-        const status = getValue<string>();
-        if (status === 'processing') {
-          return (
-            <Tooltip label={t('table.processing')}>
-              <Loader size="sm" aria-label={t('table.processing')} />
-            </Tooltip>
-          );
-        }
-        const color = status === 'ok' ? 'teal' : status === 'error' ? 'red' : 'gray';
-        return (
-          <Badge
-            color={color}
-            variant="light"
-            size="sm"
-            styles={{
-              root: { maxWidth: '100%' },
-              label: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-            }}
-          >
-            {status}
-          </Badge>
-        );
-      },
+      meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => statusCell(getValue, t),
     },
     {
       accessorKey: 'filename',
@@ -180,12 +175,7 @@ export function buildQueueJobsTableColumns({
           size="sm"
           ta="center"
           w="100%"
-          style={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            minWidth: 0,
-          }}
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
         >
           {formatFileSize(row.original.size_bytes)}
         </Text>
@@ -200,12 +190,7 @@ export function buildQueueJobsTableColumns({
           size="sm"
           ta="center"
           w="100%"
-          style={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            minWidth: 0,
-          }}
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
         >
           {formatDurationSeconds(getValue<number>())}
         </Text>
@@ -220,12 +205,7 @@ export function buildQueueJobsTableColumns({
           size="sm"
           ta="center"
           w="100%"
-          style={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            minWidth: 0,
-          }}
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
         >
           {formatNumber(getValue<number>())}
         </Text>
@@ -240,12 +220,7 @@ export function buildQueueJobsTableColumns({
           size="sm"
           ta="center"
           w="100%"
-          style={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            minWidth: 0,
-          }}
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
         >
           {formatNumber(getValue<number>())}
         </Text>
@@ -274,4 +249,139 @@ export function buildQueueJobsTableColumns({
       ),
     },
   ];
+}
+
+function buildLlmColumns({
+  t,
+  formatFinishedAt,
+  isTightTable,
+  onOpenArtifact,
+  onViewError,
+}: Pick<BuildQueueJobsTableColumnsParams, 't' | 'formatFinishedAt' | 'isTightTable' | 'onOpenArtifact' | 'onViewError'>): ColumnDef<LlmJob>[] {
+  return [
+    {
+      id: 'sort_time',
+      accessorFn: (row) => row.finished_at || row.received_at || '',
+      header: t('table.finishedTime'),
+      meta: { fixedWidthPx: 196 } satisfies QueueJobsTableColumnMeta,
+      cell: ({ row }) => {
+        const { status, finished_at, received_at } = row.original;
+        const primary = status === 'processing' ? undefined : (finished_at ?? received_at);
+        return (
+          <Text
+            size="sm"
+            w="100%"
+            style={
+              isTightTable
+                ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
+                : {
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minWidth: 0,
+                  }
+            }
+          >
+            {formatFinishedAt(primary)}
+          </Text>
+        );
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: t('table.status'),
+      meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => statusCell(getValue, t),
+    },
+    {
+      accessorKey: 'filename',
+      header: t('table.filename'),
+      cell: ({ getValue }) => (
+        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
+          {getValue<string>()}
+        </Text>
+      ),
+    },
+    {
+      accessorKey: 'llm_profile',
+      header: t('table.llmProfile'),
+      meta: { fixedWidthPx: 140 } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => (
+        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
+          {getValue<string>()}
+        </Text>
+      ),
+    },
+    {
+      accessorKey: 'provider',
+      header: t('table.provider'),
+      meta: { fixedWidthPx: 120 } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => (
+        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
+          {getValue<string>()}
+        </Text>
+      ),
+    },
+    {
+      accessorKey: 'vector_count',
+      header: t('table.vectors'),
+      meta: { fixedWidthPx: 72, centerContent: true } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => (
+        <Text
+          size="sm"
+          ta="center"
+          w="100%"
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+        >
+          {formatNumber(getValue<number>())}
+        </Text>
+      ),
+    },
+    {
+      accessorKey: 'duration_seconds',
+      header: t('table.duration'),
+      meta: { fixedWidthPx: 84, centerContent: true } satisfies QueueJobsTableColumnMeta,
+      cell: ({ getValue }) => (
+        <Text
+          size="sm"
+          ta="center"
+          w="100%"
+          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+        >
+          {formatDurationSeconds(getValue<number>())}
+        </Text>
+      ),
+    },
+    {
+      accessorKey: 'source_path',
+      header: t('table.sourcePath'),
+      cell: ({ getValue }) => (
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {getValue<string>()}
+        </Text>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
+      cell: ({ row }) => (
+        <QueueJobsTableRowActions
+          job={row.original}
+          onOpenArtifact={onOpenArtifact}
+          onViewError={onViewError}
+        />
+      ),
+    },
+  ];
+}
+
+export function buildQueueJobsTableColumns(
+  params: BuildQueueJobsTableColumnsParams
+): ColumnDef<AnyJob>[] {
+  if (params.mode === 'llm') {
+    return buildLlmColumns(params) as ColumnDef<AnyJob>[];
+  }
+  return buildTxtColumns(params) as ColumnDef<AnyJob>[];
 }

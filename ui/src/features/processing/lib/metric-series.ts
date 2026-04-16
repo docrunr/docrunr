@@ -1,12 +1,12 @@
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob } from '../../../services/workerApi.types';
 import type { OverviewTimeRange } from './time-buckets';
 import { getTimeBucketLayout } from './time-buckets';
 import { visitFinishedJobsInTimeBuckets } from './job-buckets';
 
 export function getTimeBucketSums(
-  jobs: WorkerJob[],
+  jobs: AnyJob[],
   range: OverviewTimeRange,
-  valueOf: (job: WorkerJob) => number
+  valueOf: (job: AnyJob) => number
 ): number[] {
   const { bucketCount } = getTimeBucketLayout(range);
   const buckets = new Array<number>(bucketCount).fill(0);
@@ -19,9 +19,9 @@ export function getTimeBucketSums(
 }
 
 export function getTimeBucketAverages(
-  jobs: WorkerJob[],
+  jobs: AnyJob[],
   range: OverviewTimeRange,
-  valueOf: (job: WorkerJob) => number
+  valueOf: (job: AnyJob) => number
 ): number[] {
   const { bucketCount } = getTimeBucketLayout(range);
   const sums = new Array<number>(bucketCount).fill(0);

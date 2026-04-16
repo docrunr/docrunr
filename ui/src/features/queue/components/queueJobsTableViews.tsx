@@ -7,12 +7,12 @@ import {
   flexRender,
 } from '@tanstack/react-table';
 import { IconArrowsSort, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob, WorkerMode } from '../../../services/workerApi.types';
 import { ArtifactViewerModal, type ArtifactViewerKind } from './ArtifactViewerModal';
 import { fixedWidthStyle, getColumnMeta } from './queueJobsTableColumns';
 
 function headerAriaSort(
-  sorted: ReturnType<Header<WorkerJob, unknown>['column']['getIsSorted']>,
+  sorted: ReturnType<Header<AnyJob, unknown>['column']['getIsSorted']>,
   canSort: boolean
 ): 'ascending' | 'descending' | 'none' | undefined {
   if (sorted === 'asc') return 'ascending';
@@ -24,7 +24,7 @@ function headerAriaSort(
 function ColumnSortIcon({
   state,
 }: {
-  state: ReturnType<Header<WorkerJob, unknown>['column']['getIsSorted']>;
+  state: ReturnType<Header<AnyJob, unknown>['column']['getIsSorted']>;
 }) {
   if (state === 'desc') {
     return <IconChevronDown size={14} stroke={1.8} />;
@@ -35,7 +35,7 @@ function ColumnSortIcon({
   return <IconArrowsSort size={14} stroke={1.8} />;
 }
 
-function QueueJobsTableHeaderCell({ header }: { header: Header<WorkerJob, unknown> }) {
+function QueueJobsTableHeaderCell({ header }: { header: Header<AnyJob, unknown> }) {
   const canSort = header.column.getCanSort();
   const sorted = header.column.getIsSorted();
   const colMeta = getColumnMeta(header.column.columnDef.meta);
@@ -84,9 +84,10 @@ function QueueJobsTableHeaderCell({ header }: { header: Header<WorkerJob, unknow
 type QueueJobsTableModalsProps = {
   artifactModal: { kind: ArtifactViewerKind; path: string; filename: string } | null;
   onCloseArtifact: () => void;
-  errorModalJob: WorkerJob | null;
+  errorModalJob: AnyJob | null;
   onCloseError: () => void;
   t: (key: string, options?: Record<string, string>) => string;
+  mode: WorkerMode;
 };
 
 export function QueueJobsTableModals({
@@ -95,6 +96,7 @@ export function QueueJobsTableModals({
   errorModalJob,
   onCloseError,
   t,
+  mode,
 }: QueueJobsTableModalsProps) {
   return (
     <>
@@ -104,6 +106,7 @@ export function QueueJobsTableModals({
         kind={artifactModal?.kind ?? 'markdown'}
         path={artifactModal?.path ?? ''}
         filename={artifactModal?.filename ?? ''}
+        mode={mode}
       />
 
       <Modal
@@ -165,13 +168,13 @@ type QueueJobsTableDataSectionProps = {
   isLoading: boolean;
   afterTable?: ReactNode;
   t: (key: string) => string;
-  table: TanStackTable<WorkerJob>;
+  table: TanStackTable<AnyJob>;
   columnCount: number;
   isTightTable: boolean;
   tableBorderColor: string;
 };
 
-function QueueJobsTableBodyRow({ row }: { row: Row<WorkerJob> }) {
+function QueueJobsTableBodyRow({ row }: { row: Row<AnyJob> }) {
   return (
     <Table.Tr>
       {row.getVisibleCells().map((cell) => {

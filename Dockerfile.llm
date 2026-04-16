@@ -3,6 +3,25 @@
 #   docker build -f Dockerfile.llm -t docrunr-worker-llm .
 #   docker run docrunr-worker-llm
 
+# Stage 1: UI build (locked to LLM mode)
+FROM node:25-bookworm-slim AS ui-builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+ARG DOCRUNR_VERSION=
+ENV VITE_APP_VERSION=${DOCRUNR_VERSION}
+ARG VITE_WORKER_MODE=llm
+ENV VITE_WORKER_MODE=${VITE_WORKER_MODE}
+
+COPY ui/package.json ui/pnpm-lock.yaml ./ui/
+RUN pnpm -C ui install --frozen-lockfile
+
+COPY ui/ ./ui/
+RUN pnpm -C ui build
+
+# Stage 2: Python builder
 FROM python:3.13-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -39,6 +58,7 @@ WORKDIR /app
 
 COPY --from=builder --chown=docrunr:docrunr /app/.venv /app/.venv
 COPY --from=builder --chown=docrunr:docrunr /app/worker-llm/src /app/worker-llm/src
+COPY --from=ui-builder --chown=docrunr:docrunr /app/ui/dist /app/worker-llm/src/docrunr_worker_llm/ui_dist
 
 RUN mkdir -p /data /db \
     && chown -R docrunr:docrunr /data /db
@@ -46,15 +66,15 @@ RUN mkdir -p /data /db \
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV HEALTH_PORT=8081
+ENV HEALTH_PORT=8080
 
 USER docrunr
 
 RUN python -c "import docrunr_worker_llm; print('DocRunr Worker LLM loaded')"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os, urllib.request; p=os.environ.get('HEALTH_PORT', '8081'); urllib.request.urlopen(f'http://localhost:{p}/health')" || exit 1
+    CMD python -c "import os, urllib.request; p=os.environ.get('HEALTH_PORT', '8080'); urllib.request.urlopen(f'http://localhost:{p}/health')" || exit 1
 
-EXPOSE 8081
+EXPOSE 8080
 
 ENTRYPOINT ["docrunr-worker-llm"]

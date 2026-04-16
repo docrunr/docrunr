@@ -602,7 +602,7 @@ Published by `worker-llm` to `docrunr.llm.results`:
 | `RABBITMQ_LLM_QUEUE`       | `docrunr.llm.jobs`              | Consume queue              |
 | `RABBITMQ_LLM_RESULT_QUEUE`| `docrunr.llm.results`           | Result queue               |
 | `RABBITMQ_LLM_DLQ_QUEUE`   | `docrunr.llm.dlq`              | Dead-letter queue          |
-| `HEALTH_PORT`               | `8081`                          | Health/API port            |
+| `HEALTH_PORT`               | `8080`                          | Health/API port            |
 
 All RabbitMQ and storage variables from the extraction worker are also supported.
 

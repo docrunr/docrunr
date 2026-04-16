@@ -1,9 +1,10 @@
 import { Center, Loader, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { WorkerModeProvider, useWorkerMode } from '../contexts/WorkerModeContext';
 import { usePolling } from '../hooks/usePolling';
 import { fetchJobs, fetchOverview } from '../services/workerApi';
-import type { WorkerJobsResponse } from '../services/workerApi.types';
+import type { AnyJobsResponse } from '../services/workerApi.types';
 import { AppSectionContent, type AppSectionId } from './app-sections';
 import { AppShellLayout } from './AppShellLayout';
 import { LoginScreen } from './LoginScreen';
@@ -29,7 +30,7 @@ function initialPathname(): string {
   return normalizePathname(raw);
 }
 
-const emptyJobs: WorkerJobsResponse = {
+const emptyJobs: AnyJobsResponse = {
   items: [],
   count: 0,
   total: 0,
@@ -39,7 +40,7 @@ const emptyJobs: WorkerJobsResponse = {
 function AppBody() {
   const [pathname, setPathname] = useState(initialPathname);
   const [desktopSidebarOpened, setDesktopSidebarOpened] = useState(readStoredSidebarOpened);
-  const [jobs, setJobs] = useState<WorkerJobsResponse>({
+  const [jobs, setJobs] = useState<AnyJobsResponse>({
     items: [],
     count: 0,
     total: 0,
@@ -56,6 +57,7 @@ function AppBody() {
   const computedColorScheme = useComputedColorScheme('light');
   const isNarrowViewport = useMediaQuery('(max-width: 48em)') ?? false;
   const { status, authEnabled, authenticated, canFetchProtected } = useWorkerAuth();
+  const { mode } = useWorkerMode();
 
   useEffect(() => {
     if (!canFetchProtected) {
@@ -114,15 +116,18 @@ function AppBody() {
       try {
         setQueueLoading(true);
         const jobsPromise = canFetchProtected
-          ? fetchJobs({
-              limit: 500,
-              status: queueStatusFilter,
-              search: queueSearch,
-            })
+          ? fetchJobs(
+              {
+                limit: 500,
+                status: queueStatusFilter,
+                search: queueSearch,
+              },
+              mode
+            )
           : Promise.resolve(emptyJobs);
         const [jobsOutcome, overviewOutcome] = await Promise.allSettled([
           jobsPromise,
-          fetchOverview(),
+          fetchOverview(mode),
         ]);
         if (!isMounted()) return;
 
@@ -143,7 +148,7 @@ function AppBody() {
         }
       }
     },
-    [activeSection, canFetchProtected, queueSearch, queueStatusFilter]
+    [activeSection, canFetchProtected, queueSearch, queueStatusFilter, mode]
   );
 
   if (status === 'loading') {
@@ -184,8 +189,10 @@ function AppBody() {
 
 export default function App() {
   return (
-    <WorkerAuthProvider>
-      <AppBody />
-    </WorkerAuthProvider>
+    <WorkerModeProvider>
+      <WorkerAuthProvider>
+        <AppBody />
+      </WorkerAuthProvider>
+    </WorkerModeProvider>
   );
 }

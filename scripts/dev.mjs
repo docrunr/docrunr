@@ -17,7 +17,7 @@ const UI_HOST = '127.0.0.1';
 const UI_PORT = 5173;
 const UI_URL = `http://${UI_HOST}:${UI_PORT}`;
 
-const LLM_MODE = process.argv.includes('--llm');
+const LLM_MODE = !process.argv.includes('--no-llm');
 
 /** @type {import('node:child_process').ChildProcess[]} */
 const children = [];
@@ -98,12 +98,12 @@ async function main() {
 }
 
 function printHelp() {
-  console.log('Usage: node ./scripts/dev.mjs [--llm]');
-  console.log('Starts RabbitMQ, worker, and UI with local dev defaults.');
+  console.log('Usage: node ./scripts/dev.mjs [--no-llm]');
+  console.log('Starts RabbitMQ, worker, worker-llm, LiteLLM, and UI.');
+  console.log('Expects Ollama running on the host (brew services).');
   console.log();
   console.log('Options:');
-  console.log('  --llm   Also start LiteLLM proxy (Docker) and worker-llm.');
-  console.log('          Expects Ollama running on the host (brew services).');
+  console.log('  --no-llm   Skip LiteLLM proxy and worker-llm.');
 }
 
 async function buildWorkerEnv() {

@@ -1,12 +1,12 @@
-import type { WorkerJob } from '../../../services/workerApi.types';
+import type { AnyJob } from '../../../services/workerApi.types';
 import type { OverviewTimeRange } from './time-buckets';
 import { getTimeBucketLayout } from './time-buckets';
 
 /** Invokes `visit` for each finished job in the time bucket it falls into for `range`. */
 export function visitFinishedJobsInTimeBuckets(
-  jobs: WorkerJob[],
+  jobs: AnyJob[],
   range: OverviewTimeRange,
-  visit: (job: WorkerJob, bucketIndex: number) => void
+  visit: (job: AnyJob, bucketIndex: number) => void
 ): void {
   const { bucketCount, bucketMs, firstBucketStart } = getTimeBucketLayout(range);
   for (const job of jobs) {

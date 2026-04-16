@@ -18,17 +18,23 @@ import {
   IconClock,
   IconFileDescription,
   IconStack2,
+  IconTag,
   IconTypography,
+  IconVector,
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TooltipContentProps } from 'recharts';
 import { useWorkerAuth } from '../../../app/useWorkerAuth';
+import { useWorkerMode } from '../../../contexts/WorkerModeContext';
 import { usePolling } from '../../../hooks/usePolling';
 import { fetchJobs, fetchOverview } from '../../../services/workerApi';
-import type { WorkerJob, WorkerOverview } from '../../../services/workerApi.types';
+import type { AnyJob, LlmJob, WorkerOverview } from '../../../services/workerApi.types';
 import { formatFileSize } from '../../../utils/file-size';
-import { getMimeCountsPerTimeBucket } from '../../processing/lib/mime-series';
+import {
+  getMimeCountsPerTimeBucket,
+  getProfileCountsPerTimeBucket,
+} from '../../processing/lib/mime-series';
 import { getTimeBucketAverages, getTimeBucketSums } from '../../processing/lib/metric-series';
 import type { OverviewTimeRange } from '../../processing/lib/time-buckets';
 import {
@@ -79,7 +85,7 @@ function getWeekAlignedTrailingUtcDateRange(
 }
 
 function buildDailyHeatmapData(
-  jobs: WorkerJob[],
+  jobs: AnyJob[],
   startDate: string,
   endDate: string
 ): Record<string, number> {
@@ -237,14 +243,19 @@ function buildSqrtHeatmapLegendRanges(
   return ranges;
 }
 
+function isLlmJob(job: AnyJob): job is LlmJob {
+  return 'llm_profile' in job;
+}
+
 export function ProcessingOverview() {
   const { t, i18n } = useTranslation();
   const { canFetchProtected } = useWorkerAuth();
+  const { mode } = useWorkerMode();
   const [timeRange, setTimeRange] = useState<OverviewTimeRange>('1h');
   const [overview, setOverview] = useState<WorkerOverview | null>(null);
   const [, setOverviewRefreshing] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
-  const [overviewJobs, setOverviewJobs] = useState<WorkerJob[]>([]);
+  const [overviewJobs, setOverviewJobs] = useState<AnyJob[]>([]);
   const [animatedCpuChartData, setAnimatedCpuChartData] = useState<CpuChartPoint[]>([]);
   const { ref: heatmapViewportRef, width: heatmapViewportWidth } = useElementSize<HTMLDivElement>();
   const { width: viewportWidth } = useViewportSize();
@@ -297,14 +308,15 @@ export function ProcessingOverview() {
   }, [rangeJobs]);
   const avgTokensInRange = useMemo(() => {
     if (rangeJobs.length === 0) return 0;
-    const total = rangeJobs.reduce((sum, j) => sum + j.total_tokens, 0);
+    const total = rangeJobs.reduce((sum, j) => sum + ('total_tokens' in j ? (j.total_tokens as number) : 0), 0);
     return total / rangeJobs.length;
   }, [rangeJobs]);
   const avgTokensSparkline = useMemo(
     () =>
-      getTimeBucketAverages(overviewJobs, timeRange, (j) =>
-        Number.isFinite(j.total_tokens) ? j.total_tokens : Number.NaN
-      ),
+      getTimeBucketAverages(overviewJobs, timeRange, (j) => {
+        const v = 'total_tokens' in j ? (j.total_tokens as number) : Number.NaN;
+        return Number.isFinite(v) ? v : Number.NaN;
+      }),
     [overviewJobs, timeRange]
   );
   const totalChunksInRange = useMemo(
@@ -315,25 +327,47 @@ export function ProcessingOverview() {
     if (rangeJobs.length === 0) return 0;
     return totalChunksInRange / rangeJobs.length;
   }, [rangeJobs, totalChunksInRange]);
-  const avgFileSizeInRange = useMemo(() => {
-    const sized = rangeJobs.filter(
-      (j) => typeof j.size_bytes === 'number' && Number.isFinite(j.size_bytes) && j.size_bytes >= 0
-    );
-    if (sized.length === 0) return null;
-    return sized.reduce((sum, j) => sum + (j.size_bytes as number), 0) / sized.length;
-  }, [rangeJobs]);
-  const avgFileSizeSparkline = useMemo(
+  const totalVectorsInRange = useMemo(
+    () =>
+      rangeJobs.reduce(
+        (sum, j) => sum + (isLlmJob(j) ? j.vector_count : 0),
+        0
+      ),
+    [rangeJobs]
+  );
+  const avgVectorsInRange = useMemo(() => {
+    if (rangeJobs.length === 0) return 0;
+    return totalVectorsInRange / rangeJobs.length;
+  }, [rangeJobs, totalVectorsInRange]);
+  const avgVectorsSparkline = useMemo(
     () =>
       getTimeBucketAverages(overviewJobs, timeRange, (j) =>
-        typeof j.size_bytes === 'number' && Number.isFinite(j.size_bytes)
-          ? j.size_bytes
-          : Number.NaN
+        isLlmJob(j) ? j.vector_count : Number.NaN
       ),
     [overviewJobs, timeRange]
   );
-  const processedMimeByBucket = useMemo(
-    () => getMimeCountsPerTimeBucket(overviewJobs, timeRange),
+  const avgFileSizeInRange = useMemo(() => {
+    const sized = rangeJobs.filter(
+      (j) => 'size_bytes' in j && typeof j.size_bytes === 'number' && Number.isFinite(j.size_bytes) && (j.size_bytes as number) >= 0
+    );
+    if (sized.length === 0) return null;
+    return sized.reduce((sum, j) => sum + ((j as { size_bytes: number }).size_bytes), 0) / sized.length;
+  }, [rangeJobs]);
+  const avgFileSizeSparkline = useMemo(
+    () =>
+      getTimeBucketAverages(overviewJobs, timeRange, (j) => {
+        if (!('size_bytes' in j)) return Number.NaN;
+        const v = j.size_bytes as number;
+        return typeof v === 'number' && Number.isFinite(v) ? v : Number.NaN;
+      }),
     [overviewJobs, timeRange]
+  );
+  const processedGroupByBucket = useMemo(
+    () =>
+      mode === 'llm'
+        ? getProfileCountsPerTimeBucket(overviewJobs, timeRange)
+        : getMimeCountsPerTimeBucket(overviewJobs, timeRange),
+    [overviewJobs, timeRange, mode]
   );
   const processedHeatmapData = useMemo(
     () =>
@@ -566,9 +600,12 @@ export function ProcessingOverview() {
       try {
         setOverviewRefreshing(true);
         const jobsPromise = canFetchProtected
-          ? fetchJobs({ limit: 500 })
+          ? fetchJobs({ limit: 500 }, mode)
           : Promise.resolve({ items: [], count: 0, total: 0, limit: 500 });
-        const [nextOverview, nextJobs] = await Promise.all([fetchOverview(), jobsPromise]);
+        const [nextOverview, nextJobs] = await Promise.all([
+          fetchOverview(mode),
+          jobsPromise,
+        ]);
         if (!isMounted()) return;
 
         setOverview(nextOverview);
@@ -583,7 +620,7 @@ export function ProcessingOverview() {
         }
       }
     },
-    [canFetchProtected]
+    [canFetchProtected, mode]
   );
 
   useEffect(() => {
@@ -633,7 +670,7 @@ export function ProcessingOverview() {
             subtitle={processedChartDescription}
             sparklineData={processedSparkline}
             sparklineColor={sparklineColor}
-            sparkBucketMimeCounts={processedMimeByBucket}
+            sparkBucketMimeCounts={processedGroupByBucket}
           />
 
           <StatCard
@@ -662,17 +699,31 @@ export function ProcessingOverview() {
             sparklineColor={sparklineColor}
           />
 
-          <StatCard
-            title={t('overview.metricTokens')}
-            icon={<IconTypography size={16} stroke={1.8} />}
-            value={Math.round(avgTokensInRange).toLocaleString()}
-            subtitle={avgMetricSubtitle}
-            sparklineData={avgTokensSparkline}
-            sparklineColor={sparklineColor}
-            sparkTooltipFormat={(v) =>
-              typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString() : ''
-            }
-          />
+          {mode === 'txt' ? (
+            <StatCard
+              title={t('overview.metricTokens')}
+              icon={<IconTypography size={16} stroke={1.8} />}
+              value={Math.round(avgTokensInRange).toLocaleString()}
+              subtitle={avgMetricSubtitle}
+              sparklineData={avgTokensSparkline}
+              sparklineColor={sparklineColor}
+              sparkTooltipFormat={(v) =>
+                typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString() : ''
+              }
+            />
+          ) : (
+            <StatCard
+              title={t('overview.metricVectors')}
+              icon={<IconVector size={16} stroke={1.8} />}
+              value={avgVectorsInRange.toFixed(1)}
+              subtitle={avgMetricSubtitle}
+              sparklineData={avgVectorsSparkline}
+              sparklineColor={sparklineColor}
+              sparkTooltipFormat={(v) =>
+                typeof v === 'number' && Number.isFinite(v) ? Math.round(v).toLocaleString() : ''
+              }
+            />
+          )}
 
           <StatCard
             title={t('overview.metricChunks')}
@@ -683,19 +734,37 @@ export function ProcessingOverview() {
             sparklineColor={sparklineColor}
           />
 
-          <StatCard
-            title={t('overview.metricFileSize')}
-            icon={<IconFileDescription size={16} stroke={1.8} />}
-            value={
-              avgFileSizeInRange == null ? '0' : formatFileSize(Math.round(avgFileSizeInRange))
-            }
-            subtitle={avgMetricSubtitle}
-            sparklineData={avgFileSizeSparkline}
-            sparklineColor={sparklineColor}
-            sparkTooltipFormat={(v) =>
-              typeof v === 'number' && Number.isFinite(v) ? formatFileSize(Math.round(v)) : ''
-            }
-          />
+          {mode === 'txt' ? (
+            <StatCard
+              title={t('overview.metricFileSize')}
+              icon={<IconFileDescription size={16} stroke={1.8} />}
+              value={
+                avgFileSizeInRange == null ? '0' : formatFileSize(Math.round(avgFileSizeInRange))
+              }
+              subtitle={avgMetricSubtitle}
+              sparklineData={avgFileSizeSparkline}
+              sparklineColor={sparklineColor}
+              sparkTooltipFormat={(v) =>
+                typeof v === 'number' && Number.isFinite(v) ? formatFileSize(Math.round(v)) : ''
+              }
+            />
+          ) : (
+            <StatCard
+              title={t('overview.metricProfile')}
+              icon={<IconTag size={16} stroke={1.8} />}
+              value={
+                (() => {
+                  const profiles = new Set(
+                    rangeJobs.filter(isLlmJob).map((j) => j.llm_profile)
+                  );
+                  return profiles.size > 0 ? [...profiles].join(', ') : '—';
+                })()
+              }
+              subtitle={avgMetricSubtitle}
+              sparklineData={[]}
+              sparklineColor={sparklineColor}
+            />
+          )}
         </SimpleGrid>
 
         <Stack gap="xs">
