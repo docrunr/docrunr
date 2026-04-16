@@ -1,5 +1,5 @@
 import { type CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Badge, Loader, Text, Tooltip } from '@mantine/core';
 import { type ColumnDef } from '@tanstack/react-table';
 import { FileTypeIcon } from '../../../components/icons/FileTypeIcon';
@@ -35,7 +35,7 @@ function formatNumber(value: number | null | undefined): string {
 }
 
 type BuildQueueJobsTableColumnsParams = {
-  t: ReturnType<typeof useTranslation>['t'];
+  t: TFunction;
   formatFinishedAt: (value: string | undefined) => string;
   isTightTable: boolean;
   onOpenArtifact: (kind: ArtifactViewerKind, path: string, job: AnyJob) => void;
@@ -43,7 +43,7 @@ type BuildQueueJobsTableColumnsParams = {
   mode: WorkerMode;
 };
 
-function statusCell(getValue: () => unknown, t: ReturnType<typeof useTranslation>['t']) {
+function statusCell(getValue: () => unknown, t: TFunction) {
   const status = getValue() as string;
   if (status === 'processing') {
     return (
@@ -66,6 +66,109 @@ function statusCell(getValue: () => unknown, t: ReturnType<typeof useTranslation
       {status}
     </Badge>
   );
+}
+
+const CENTERED_NUMERIC_TEXT_STYLE: CSSProperties = {
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  minWidth: 0,
+};
+
+function finishedAtColumnDef(
+  t: TFunction,
+  formatFinishedAt: (value: string | undefined) => string,
+  isTightTable: boolean
+): ColumnDef<AnyJob> {
+  return {
+    id: 'sort_time',
+    accessorFn: (row) => row.finished_at || row.received_at || '',
+    header: t('table.finishedTime'),
+    meta: { fixedWidthPx: 196 } satisfies QueueJobsTableColumnMeta,
+    cell: ({ row }) => {
+      const { status, finished_at, received_at } = row.original;
+      const primary = status === 'processing' ? undefined : (finished_at ?? received_at);
+      return (
+        <Text
+          size="sm"
+          w="100%"
+          style={
+            isTightTable
+              ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
+              : {
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  minWidth: 0,
+                }
+          }
+        >
+          {formatFinishedAt(primary)}
+        </Text>
+      );
+    },
+  };
+}
+
+function sharedStatusColumnDef(t: TFunction): ColumnDef<AnyJob> {
+  return {
+    accessorKey: 'status',
+    header: t('table.status'),
+    meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
+    cell: ({ getValue }) => statusCell(getValue, t),
+  };
+}
+
+function sharedFilenameColumnDef(t: TFunction): ColumnDef<AnyJob> {
+  return {
+    accessorKey: 'filename',
+    header: t('table.filename'),
+    cell: ({ getValue }) => (
+      <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
+        {getValue<string>()}
+      </Text>
+    ),
+  };
+}
+
+function sharedDurationColumnDef(t: TFunction): ColumnDef<AnyJob> {
+  return {
+    accessorKey: 'duration_seconds',
+    header: t('table.duration'),
+    meta: { fixedWidthPx: 84, centerContent: true } satisfies QueueJobsTableColumnMeta,
+    cell: ({ getValue }) => (
+      <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
+        {formatDurationSeconds(getValue<number>())}
+      </Text>
+    ),
+  };
+}
+
+function sharedSourcePathColumnDef(t: TFunction): ColumnDef<AnyJob> {
+  return {
+    accessorKey: 'source_path',
+    header: t('table.sourcePath'),
+    cell: ({ getValue }) => (
+      <Text size="sm" c="dimmed" lineClamp={1}>
+        {getValue<string>()}
+      </Text>
+    ),
+  };
+}
+
+function sharedActionsColumnDef(
+  onOpenArtifact: BuildQueueJobsTableColumnsParams['onOpenArtifact'],
+  onViewError: BuildQueueJobsTableColumnsParams['onViewError']
+): ColumnDef<AnyJob> {
+  return {
+    id: 'actions',
+    header: '',
+    enableSorting: false,
+    meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
+    cell: ({ row }) => (
+      <QueueJobsTableRowActions job={row.original} onOpenArtifact={onOpenArtifact} onViewError={onViewError} />
+    ),
+  };
 }
 
 function buildTxtColumns({
@@ -107,49 +210,9 @@ function buildTxtColumns({
         );
       },
     },
-    {
-      id: 'sort_time',
-      accessorFn: (row) => row.finished_at || row.received_at || '',
-      header: t('table.finishedTime'),
-      meta: { fixedWidthPx: 196 } satisfies QueueJobsTableColumnMeta,
-      cell: ({ row }) => {
-        const { status, finished_at, received_at } = row.original;
-        const primary = status === 'processing' ? undefined : (finished_at ?? received_at);
-        return (
-          <Text
-            size="sm"
-            w="100%"
-            style={
-              isTightTable
-                ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
-                : {
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    minWidth: 0,
-                  }
-            }
-          >
-            {formatFinishedAt(primary)}
-          </Text>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: t('table.status'),
-      meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
-      cell: ({ getValue }) => statusCell(getValue, t),
-    },
-    {
-      accessorKey: 'filename',
-      header: t('table.filename'),
-      cell: ({ getValue }) => (
-        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
-          {getValue<string>()}
-        </Text>
-      ),
-    },
+    finishedAtColumnDef(t, formatFinishedAt, isTightTable) as ColumnDef<WorkerJob>,
+    sharedStatusColumnDef(t) as ColumnDef<WorkerJob>,
+    sharedFilenameColumnDef(t) as ColumnDef<WorkerJob>,
     {
       id: 'priority',
       accessorFn: (row) => row.priority ?? 0,
@@ -171,42 +234,18 @@ function buildTxtColumns({
       header: t('table.size'),
       meta: { fixedWidthPx: 96, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ row }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
+        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
           {formatFileSize(row.original.size_bytes)}
         </Text>
       ),
     },
-    {
-      accessorKey: 'duration_seconds',
-      header: t('table.duration'),
-      meta: { fixedWidthPx: 84, centerContent: true } satisfies QueueJobsTableColumnMeta,
-      cell: ({ getValue }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
-          {formatDurationSeconds(getValue<number>())}
-        </Text>
-      ),
-    },
+    sharedDurationColumnDef(t) as ColumnDef<WorkerJob>,
     {
       accessorKey: 'chunk_count',
       header: t('table.chunks'),
       meta: { fixedWidthPx: 64, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
+        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
           {formatNumber(getValue<number>())}
         </Text>
       ),
@@ -216,38 +255,13 @@ function buildTxtColumns({
       header: t('table.tokens'),
       meta: { fixedWidthPx: 92, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
+        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
           {formatNumber(getValue<number>())}
         </Text>
       ),
     },
-    {
-      accessorKey: 'source_path',
-      header: t('table.sourcePath'),
-      cell: ({ getValue }) => (
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {getValue<string>()}
-        </Text>
-      ),
-    },
-    {
-      id: 'actions',
-      header: '',
-      enableSorting: false,
-      meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
-      cell: ({ row }) => (
-        <QueueJobsTableRowActions
-          job={row.original}
-          onOpenArtifact={onOpenArtifact}
-          onViewError={onViewError}
-        />
-      ),
-    },
+    sharedSourcePathColumnDef(t) as ColumnDef<WorkerJob>,
+    sharedActionsColumnDef(onOpenArtifact, onViewError) as ColumnDef<WorkerJob>,
   ];
 }
 
@@ -259,49 +273,9 @@ function buildLlmColumns({
   onViewError,
 }: Pick<BuildQueueJobsTableColumnsParams, 't' | 'formatFinishedAt' | 'isTightTable' | 'onOpenArtifact' | 'onViewError'>): ColumnDef<LlmJob>[] {
   return [
-    {
-      id: 'sort_time',
-      accessorFn: (row) => row.finished_at || row.received_at || '',
-      header: t('table.finishedTime'),
-      meta: { fixedWidthPx: 196 } satisfies QueueJobsTableColumnMeta,
-      cell: ({ row }) => {
-        const { status, finished_at, received_at } = row.original;
-        const primary = status === 'processing' ? undefined : (finished_at ?? received_at);
-        return (
-          <Text
-            size="sm"
-            w="100%"
-            style={
-              isTightTable
-                ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
-                : {
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    minWidth: 0,
-                  }
-            }
-          >
-            {formatFinishedAt(primary)}
-          </Text>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: t('table.status'),
-      meta: { fixedWidthPx: 76, centerContent: true, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
-      cell: ({ getValue }) => statusCell(getValue, t),
-    },
-    {
-      accessorKey: 'filename',
-      header: t('table.filename'),
-      cell: ({ getValue }) => (
-        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
-          {getValue<string>()}
-        </Text>
-      ),
-    },
+    finishedAtColumnDef(t, formatFinishedAt, isTightTable) as ColumnDef<LlmJob>,
+    sharedStatusColumnDef(t) as ColumnDef<LlmJob>,
+    sharedFilenameColumnDef(t) as ColumnDef<LlmJob>,
     {
       accessorKey: 'llm_profile',
       header: t('table.llmProfile'),
@@ -327,53 +301,14 @@ function buildLlmColumns({
       header: t('table.vectors'),
       meta: { fixedWidthPx: 72, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
+        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
           {formatNumber(getValue<number>())}
         </Text>
       ),
     },
-    {
-      accessorKey: 'duration_seconds',
-      header: t('table.duration'),
-      meta: { fixedWidthPx: 84, centerContent: true } satisfies QueueJobsTableColumnMeta,
-      cell: ({ getValue }) => (
-        <Text
-          size="sm"
-          ta="center"
-          w="100%"
-          style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
-        >
-          {formatDurationSeconds(getValue<number>())}
-        </Text>
-      ),
-    },
-    {
-      accessorKey: 'source_path',
-      header: t('table.sourcePath'),
-      cell: ({ getValue }) => (
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {getValue<string>()}
-        </Text>
-      ),
-    },
-    {
-      id: 'actions',
-      header: '',
-      enableSorting: false,
-      meta: { centerContent: true, fixedWidthPx: 76 } satisfies QueueJobsTableColumnMeta,
-      cell: ({ row }) => (
-        <QueueJobsTableRowActions
-          job={row.original}
-          onOpenArtifact={onOpenArtifact}
-          onViewError={onViewError}
-        />
-      ),
-    },
+    sharedDurationColumnDef(t) as ColumnDef<LlmJob>,
+    sharedSourcePathColumnDef(t) as ColumnDef<LlmJob>,
+    sharedActionsColumnDef(onOpenArtifact, onViewError) as ColumnDef<LlmJob>,
   ];
 }
 

@@ -69,14 +69,14 @@ export type LlmJob = {
 
 export type AnyJob = WorkerJob | LlmJob;
 
-export type WorkerJobsResponse = {
+type WorkerJobsResponse = {
   items: WorkerJob[];
   count: number;
   total: number;
   limit: number;
 };
 
-export type LlmJobsResponse = {
+type LlmJobsResponse = {
   items: LlmJob[];
   count: number;
   total: number;

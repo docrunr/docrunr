@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-export type WorkerMode = 'txt' | 'llm';
+import type { WorkerMode } from '../services/workerApi.types';
 
 type WorkerModeContextValue = {
   mode: WorkerMode;

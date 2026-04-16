@@ -11,21 +11,31 @@ function isLlmJob(job: AnyJob): job is LlmJob {
   return 'llm_profile' in job;
 }
 
-/** Per-bucket MIME counts (lowercased keys; missing MIME → `unknown`), aligned with `getTimeBucketSums(..., () => 1)`. */
-export function getMimeCountsPerTimeBucket(
+function accumulateKeyedCountsPerBucket(
   jobs: AnyJob[],
-  range: OverviewTimeRange
+  range: OverviewTimeRange,
+  keyForJob: (job: AnyJob) => string
 ): Record<string, number>[] {
   const { bucketCount } = getTimeBucketLayout(range);
   const perBucket: Record<string, number>[] = Array.from({ length: bucketCount }, () => ({}));
 
   visitFinishedJobsInTimeBuckets(jobs, range, (job, idx) => {
-    const mime = isWorkerJob(job) ? (job.mime_type?.trim().toLowerCase() || 'unknown') : 'unknown';
+    const key = keyForJob(job);
     const row = perBucket[idx];
-    row[mime] = (row[mime] ?? 0) + 1;
+    row[key] = (row[key] ?? 0) + 1;
   });
 
   return perBucket;
+}
+
+/** Per-bucket MIME counts (lowercased keys; missing MIME → `unknown`), aligned with `getTimeBucketSums(..., () => 1)`. */
+export function getMimeCountsPerTimeBucket(
+  jobs: AnyJob[],
+  range: OverviewTimeRange
+): Record<string, number>[] {
+  return accumulateKeyedCountsPerBucket(jobs, range, (job) =>
+    isWorkerJob(job) ? (job.mime_type?.trim().toLowerCase() || 'unknown') : 'unknown'
+  );
 }
 
 /** Per-bucket LLM profile counts, aligned with `getTimeBucketSums(..., () => 1)`. */
@@ -33,14 +43,7 @@ export function getProfileCountsPerTimeBucket(
   jobs: AnyJob[],
   range: OverviewTimeRange
 ): Record<string, number>[] {
-  const { bucketCount } = getTimeBucketLayout(range);
-  const perBucket: Record<string, number>[] = Array.from({ length: bucketCount }, () => ({}));
-
-  visitFinishedJobsInTimeBuckets(jobs, range, (job, idx) => {
-    const profile = isLlmJob(job) ? (job.llm_profile || 'unknown') : 'unknown';
-    const row = perBucket[idx];
-    row[profile] = (row[profile] ?? 0) + 1;
-  });
-
-  return perBucket;
+  return accumulateKeyedCountsPerBucket(jobs, range, (job) =>
+    isLlmJob(job) ? (job.llm_profile || 'unknown') : 'unknown'
+  );
 }

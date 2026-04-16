@@ -1,4 +1,12 @@
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  Component,
+  type ErrorInfo,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, Group, Loader, Modal, Paper, Stack, Tabs, Text } from '@mantine/core';
@@ -119,6 +127,36 @@ type ArtifactEmbedding = {
 };
 
 const CHUNK_EXCERPT_MAX_CHARS = 280;
+
+function ExpandablePreBlock({
+  expanded,
+  excerpt,
+  fullText,
+  needsToggle,
+  onToggle,
+}: {
+  expanded: boolean;
+  excerpt: string;
+  fullText: string;
+  needsToggle: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <div className={expanded ? styles.chunkTextFull : styles.chunkTextExcerpt}>
+        <Text component="pre" size="sm" className={styles.chunkPre}>
+          {expanded ? fullText : excerpt}
+        </Text>
+      </div>
+      {needsToggle ? (
+        <Button variant="subtle" size="xs" onClick={onToggle}>
+          {expanded ? t('artifactViewer.chunkCollapse') : t('artifactViewer.chunkExpand')}
+        </Button>
+      ) : null}
+    </>
+  );
+}
 
 type ChunksTabState =
   | { kind: 'invalid' }
@@ -343,16 +381,13 @@ function ChunkCard({ chunk }: { chunk: ArtifactChunk }) {
             {sectionLabel}
           </Text>
         </div>
-        <div className={expanded ? styles.chunkTextFull : styles.chunkTextExcerpt}>
-          <Text component="pre" size="sm" className={styles.chunkPre}>
-            {expanded ? chunk.text : excerpt}
-          </Text>
-        </div>
-        {needsToggle ? (
-          <Button variant="subtle" size="xs" onClick={() => setExpanded((v) => !v)}>
-            {expanded ? t('artifactViewer.chunkCollapse') : t('artifactViewer.chunkExpand')}
-          </Button>
-        ) : null}
+        <ExpandablePreBlock
+          expanded={expanded}
+          excerpt={excerpt}
+          fullText={chunk.text}
+          needsToggle={needsToggle}
+          onToggle={() => setExpanded((v) => !v)}
+        />
       </Stack>
     </Paper>
   );
@@ -376,18 +411,13 @@ function VectorCard({ embedding }: { embedding: ArtifactEmbedding }) {
           </Text>
         </Group>
         {embedding.text ? (
-          <>
-            <div className={expanded ? styles.chunkTextFull : styles.chunkTextExcerpt}>
-              <Text component="pre" size="sm" className={styles.chunkPre}>
-                {expanded ? embedding.text : excerpt}
-              </Text>
-            </div>
-            {needsToggle ? (
-              <Button variant="subtle" size="xs" onClick={() => setExpanded((v) => !v)}>
-                {expanded ? t('artifactViewer.chunkCollapse') : t('artifactViewer.chunkExpand')}
-              </Button>
-            ) : null}
-          </>
+          <ExpandablePreBlock
+            expanded={expanded}
+            excerpt={excerpt}
+            fullText={embedding.text}
+            needsToggle={needsToggle}
+            onToggle={() => setExpanded((v) => !v)}
+          />
         ) : null}
       </Stack>
     </Paper>
@@ -403,6 +433,304 @@ function ModalLoadingRow({ label }: { label: string }) {
       </Text>
     </Group>
   );
+}
+
+type ArtifactMarkdownBodyProps = {
+  t: TFunction;
+  markdownTab: string;
+  setMarkdownTab: (next: string) => void;
+  markdownPreviewPhase: MarkdownPreviewPhase;
+  content: string;
+  markdownPreviewHtml: string;
+  previewHostRef: RefObject<HTMLDivElement | null>;
+  rawMarkdownRef: RefObject<HTMLElement | null>;
+};
+
+function artifactViewerMarkdownBody({
+  t,
+  markdownTab,
+  setMarkdownTab,
+  markdownPreviewPhase,
+  content,
+  markdownPreviewHtml,
+  previewHostRef,
+  rawMarkdownRef,
+}: ArtifactMarkdownBodyProps): ReactNode {
+  return (
+    <Stack gap="md" className={styles.body}>
+      <Tabs value={markdownTab} onChange={(v) => setMarkdownTab(v ?? 'preview')}>
+        <Tabs.List className={styles.tabsList}>
+          <Tabs.Tab value="preview">{t('artifactViewer.tabPreview')}</Tabs.Tab>
+          <Tabs.Tab value="raw">{t('artifactViewer.tabRaw')}</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="preview" pt="sm">
+          {markdownPreviewPhase === 'skipped' ? (
+            <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+              {t('artifactViewer.largeMarkdownPreview')}
+            </Alert>
+          ) : (
+            <div className={styles.scrollSurface}>
+              {markdownPreviewPhase === 'rendering' ? (
+                <Group justify="center" py="xl" style={{ minHeight: 200, width: '100%' }}>
+                  <Loader size="sm" aria-label={t('artifactViewer.previewRendering')} />
+                  <Text size="sm" c="dimmed">
+                    {t('artifactViewer.previewRendering')}
+                  </Text>
+                </Group>
+              ) : null}
+              {markdownPreviewPhase === 'error' ? (
+                <div className={styles.centered}>
+                  <Text size="sm" c="dimmed" ta="center">
+                    {t('artifactViewer.previewError')}
+                  </Text>
+                </div>
+              ) : null}
+              <div
+                ref={previewHostRef}
+                className={styles.prose}
+                hidden={markdownPreviewPhase !== 'ready' || markdownPreviewHtml.length === 0}
+              />
+            </div>
+          )}
+        </Tabs.Panel>
+        <Tabs.Panel value="raw" pt="sm">
+          <Stack gap="xs">
+            {content.length > LARGE_MARKDOWN_CHAR_THRESHOLD ? (
+              <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+                {t('artifactViewer.largeMarkdownRaw')}
+              </Alert>
+            ) : null}
+            <div className={styles.scrollSurface}>
+              <pre className={styles.codeBlock}>
+                <code ref={rawMarkdownRef} />
+              </pre>
+            </div>
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
+    </Stack>
+  );
+}
+
+function artifactViewerJsonCardsPanelInner(
+  t: TFunction,
+  isLlm: boolean,
+  chunksState: ChunksTabState,
+  vectorsState: VectorsTabState
+): ReactNode {
+  if (isLlm) {
+    if (vectorsState.kind === 'invalid') return null;
+    if (vectorsState.kind === 'large') {
+      return (
+        <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+          {t('artifactViewer.vectorsUnavailableLarge')}
+        </Alert>
+      );
+    }
+    if (vectorsState.kind === 'missing') {
+      return (
+        <div className={styles.centered}>
+          <Text size="sm" c="dimmed" ta="center">
+            {t('artifactViewer.vectorsMissing')}
+          </Text>
+        </div>
+      );
+    }
+    if (vectorsState.kind === 'empty') {
+      return (
+        <div className={styles.centered}>
+          <Text size="sm" c="dimmed" ta="center">
+            {t('artifactViewer.vectorsEmpty')}
+          </Text>
+        </div>
+      );
+    }
+    if (vectorsState.kind === 'ready') {
+      return (
+        <div className={styles.chunkListScroll}>
+          {vectorsState.embeddings.map((emb, i) => (
+            <VectorCard key={`${emb.index}-${i}`} embedding={emb} />
+          ))}
+        </div>
+      );
+    }
+    return null;
+  }
+
+  if (chunksState.kind === 'invalid') return null;
+  if (chunksState.kind === 'large') {
+    return (
+      <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+        {t('artifactViewer.chunksUnavailableLarge')}
+      </Alert>
+    );
+  }
+  if (chunksState.kind === 'missing') {
+    return (
+      <div className={styles.centered}>
+        <Text size="sm" c="dimmed" ta="center">
+          {t('artifactViewer.chunksMissing')}
+        </Text>
+      </div>
+    );
+  }
+  if (chunksState.kind === 'empty') {
+    return (
+      <div className={styles.centered}>
+        <Text size="sm" c="dimmed" ta="center">
+          {t('artifactViewer.chunksEmpty')}
+        </Text>
+      </div>
+    );
+  }
+  if (chunksState.kind === 'ready') {
+    return (
+      <div className={styles.chunkListScroll}>
+        {chunksState.chunks.map((chunk, i) => (
+          <ChunkCard key={`${chunk.chunk_index}-${i}`} chunk={chunk} />
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+type ArtifactJsonBodyProps = {
+  t: TFunction;
+  mode: WorkerMode;
+  jsonTab: string;
+  setJsonTab: (next: string) => void;
+  jsonDisplay: JsonDisplayState;
+  jsonCodeRef: RefObject<HTMLElement | null>;
+};
+
+function artifactViewerJsonBody({
+  t,
+  mode,
+  jsonTab,
+  setJsonTab,
+  jsonDisplay,
+  jsonCodeRef,
+}: ArtifactJsonBodyProps): ReactNode {
+  const isLlm = mode === 'llm';
+  const chunksState = jsonDisplay.chunksState;
+  const vectorsState = jsonDisplay.vectorsState;
+  const cardTabValue = isLlm ? 'vectors' : 'chunks';
+  const cardsPanelInner = artifactViewerJsonCardsPanelInner(t, isLlm, chunksState, vectorsState);
+  const showCardTab = isLlm
+    ? !jsonDisplay.invalid && vectorsState.kind !== 'invalid'
+    : !jsonDisplay.invalid;
+  const cardTabLabel = isLlm
+    ? jsonVectorsTabLabel(vectorsState, t)
+    : jsonChunksTabLabel(chunksState, t);
+
+  return (
+    <Stack gap="md" className={styles.body}>
+      <Tabs value={jsonTab} onChange={(v) => setJsonTab(v ?? cardTabValue)}>
+        <Tabs.List className={styles.tabsList}>
+          {showCardTab ? <Tabs.Tab value={cardTabValue}>{cardTabLabel}</Tabs.Tab> : null}
+          <Tabs.Tab value="raw">{t('artifactViewer.tabRaw')}</Tabs.Tab>
+        </Tabs.List>
+        {showCardTab ? (
+          <Tabs.Panel value={cardTabValue} pt="sm">
+            {cardsPanelInner}
+          </Tabs.Panel>
+        ) : null}
+        <Tabs.Panel value="raw" pt="sm">
+          <Stack gap="xs">
+            {jsonDisplay.largeRaw ? (
+              <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
+                {t('artifactViewer.largeJsonRaw')}
+              </Alert>
+            ) : null}
+            {jsonDisplay.invalid ? (
+              <Text size="sm" c="dimmed" className={styles.invalidJsonNote}>
+                {t('artifactViewer.invalidJsonNote')}
+              </Text>
+            ) : null}
+            <div className={styles.scrollSurface}>
+              <pre className={styles.codeBlock}>
+                <code ref={jsonCodeRef} />
+              </pre>
+            </div>
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
+    </Stack>
+  );
+}
+
+type ArtifactModalBodyProps = {
+  t: TFunction;
+  opened: boolean;
+  path: string;
+  phase: FetchPhase;
+  fetchError: string | null;
+  kind: ArtifactViewerKind;
+  mode: WorkerMode;
+  content: string;
+  isEmptySuccess: boolean;
+  markdownTab: string;
+  setMarkdownTab: (next: string) => void;
+  markdownPreviewPhase: MarkdownPreviewPhase;
+  markdownPreviewHtml: string;
+  previewHostRef: RefObject<HTMLDivElement | null>;
+  rawMarkdownRef: RefObject<HTMLElement | null>;
+  jsonPreparePhase: JsonPreparePhase;
+  jsonTab: string;
+  setJsonTab: (next: string) => void;
+  jsonDisplay: JsonDisplayState;
+  jsonCodeRef: RefObject<HTMLElement | null>;
+};
+
+function artifactViewerModalBody(p: ArtifactModalBodyProps): ReactNode {
+  if (!p.opened || !p.path) {
+    return null;
+  }
+  if (p.phase === 'loading') {
+    return <ModalLoadingRow label={p.t('artifactViewer.loading')} />;
+  }
+  if (p.phase === 'error') {
+    return (
+      <Paper className={styles.body} p="md" withBorder radius="sm">
+        <Text size="sm" c="red">
+          {p.t('artifactViewer.loadError', { message: p.fetchError ?? '—' })}
+        </Text>
+      </Paper>
+    );
+  }
+  if (p.isEmptySuccess) {
+    return (
+      <div className={styles.centered}>
+        <Text size="sm" c="dimmed" ta="center">
+          {p.t('artifactViewer.empty')}
+        </Text>
+      </div>
+    );
+  }
+  if (p.kind === 'markdown') {
+    return artifactViewerMarkdownBody({
+      t: p.t,
+      markdownTab: p.markdownTab,
+      setMarkdownTab: p.setMarkdownTab,
+      markdownPreviewPhase: p.markdownPreviewPhase,
+      content: p.content,
+      markdownPreviewHtml: p.markdownPreviewHtml,
+      previewHostRef: p.previewHostRef,
+      rawMarkdownRef: p.rawMarkdownRef,
+    });
+  }
+  if (p.jsonPreparePhase === 'preparing') {
+    return <ModalLoadingRow label={p.t('artifactViewer.preparing')} />;
+  }
+  return artifactViewerJsonBody({
+    t: p.t,
+    mode: p.mode,
+    jsonTab: p.jsonTab,
+    setJsonTab: p.setJsonTab,
+    jsonDisplay: p.jsonDisplay,
+    jsonCodeRef: p.jsonCodeRef,
+  });
 }
 
 export function ArtifactViewerModal({
@@ -798,234 +1126,28 @@ export function ArtifactViewerModal({
 
   const isEmptySuccess = opened && phase === 'success' && !content.trim();
 
-  const body = (() => {
-    if (!opened) {
-      return null;
-    }
-    if (!path) {
-      return null;
-    }
-    if (phase === 'loading') {
-      return <ModalLoadingRow label={t('artifactViewer.loading')} />;
-    }
-    if (phase === 'error') {
-      return (
-        <Paper className={styles.body} p="md" withBorder radius="sm">
-          <Text size="sm" c="red">
-            {t('artifactViewer.loadError', { message: fetchError ?? '—' })}
-          </Text>
-        </Paper>
-      );
-    }
-    if (isEmptySuccess) {
-      return (
-        <div className={styles.centered}>
-          <Text size="sm" c="dimmed" ta="center">
-            {t('artifactViewer.empty')}
-          </Text>
-        </div>
-      );
-    }
-    if (kind === 'markdown') {
-      return (
-        <Stack gap="md" className={styles.body}>
-          <Tabs value={markdownTab} onChange={(v) => setMarkdownTab(v ?? 'preview')}>
-            <Tabs.List className={styles.tabsList}>
-              <Tabs.Tab value="preview">{t('artifactViewer.tabPreview')}</Tabs.Tab>
-              <Tabs.Tab value="raw">{t('artifactViewer.tabRaw')}</Tabs.Tab>
-            </Tabs.List>
-            <Tabs.Panel value="preview" pt="sm">
-              {markdownPreviewPhase === 'skipped' ? (
-                <Alert
-                  variant="light"
-                  color="gray"
-                  icon={<IconInfoCircle size={18} stroke={1.8} />}
-                >
-                  {t('artifactViewer.largeMarkdownPreview')}
-                </Alert>
-              ) : (
-                <div className={styles.scrollSurface}>
-                  {markdownPreviewPhase === 'rendering' ? (
-                    <Group justify="center" py="xl" style={{ minHeight: 200, width: '100%' }}>
-                      <Loader size="sm" aria-label={t('artifactViewer.previewRendering')} />
-                      <Text size="sm" c="dimmed">
-                        {t('artifactViewer.previewRendering')}
-                      </Text>
-                    </Group>
-                  ) : null}
-                  {markdownPreviewPhase === 'error' ? (
-                    <div className={styles.centered}>
-                      <Text size="sm" c="dimmed" ta="center">
-                        {t('artifactViewer.previewError')}
-                      </Text>
-                    </div>
-                  ) : null}
-                  <div
-                    ref={previewHostRef}
-                    className={styles.prose}
-                    hidden={markdownPreviewPhase !== 'ready' || markdownPreviewHtml.length === 0}
-                  />
-                </div>
-              )}
-            </Tabs.Panel>
-            <Tabs.Panel value="raw" pt="sm">
-              <Stack gap="xs">
-                {content.length > LARGE_MARKDOWN_CHAR_THRESHOLD ? (
-                  <Alert
-                    variant="light"
-                    color="gray"
-                    icon={<IconInfoCircle size={18} stroke={1.8} />}
-                  >
-                    {t('artifactViewer.largeMarkdownRaw')}
-                  </Alert>
-                ) : null}
-                <div className={styles.scrollSurface}>
-                  <pre className={styles.codeBlock}>
-                    <code ref={rawMarkdownRef} />
-                  </pre>
-                </div>
-              </Stack>
-            </Tabs.Panel>
-          </Tabs>
-        </Stack>
-      );
-    }
-    if (jsonPreparePhase === 'preparing') {
-      return <ModalLoadingRow label={t('artifactViewer.preparing')} />;
-    }
-
-    const isLlm = mode === 'llm';
-    const chunksState = jsonDisplay.chunksState;
-    const vectorsState = jsonDisplay.vectorsState;
-    const cardTabValue = isLlm ? 'vectors' : 'chunks';
-
-    const cardsPanelInner = (() => {
-      if (isLlm) {
-        if (vectorsState.kind === 'invalid') return null;
-        if (vectorsState.kind === 'large') {
-          return (
-            <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
-              {t('artifactViewer.vectorsUnavailableLarge')}
-            </Alert>
-          );
-        }
-        if (vectorsState.kind === 'missing') {
-          return (
-            <div className={styles.centered}>
-              <Text size="sm" c="dimmed" ta="center">
-                {t('artifactViewer.vectorsMissing')}
-              </Text>
-            </div>
-          );
-        }
-        if (vectorsState.kind === 'empty') {
-          return (
-            <div className={styles.centered}>
-              <Text size="sm" c="dimmed" ta="center">
-                {t('artifactViewer.vectorsEmpty')}
-              </Text>
-            </div>
-          );
-        }
-        if (vectorsState.kind === 'ready') {
-          return (
-            <div className={styles.chunkListScroll}>
-              {vectorsState.embeddings.map((emb, i) => (
-                <VectorCard key={`${emb.index}-${i}`} embedding={emb} />
-              ))}
-            </div>
-          );
-        }
-        return null;
-      }
-
-      if (chunksState.kind === 'invalid') return null;
-      if (chunksState.kind === 'large') {
-        return (
-          <Alert variant="light" color="gray" icon={<IconInfoCircle size={18} stroke={1.8} />}>
-            {t('artifactViewer.chunksUnavailableLarge')}
-          </Alert>
-        );
-      }
-      if (chunksState.kind === 'missing') {
-        return (
-          <div className={styles.centered}>
-            <Text size="sm" c="dimmed" ta="center">
-              {t('artifactViewer.chunksMissing')}
-            </Text>
-          </div>
-        );
-      }
-      if (chunksState.kind === 'empty') {
-        return (
-          <div className={styles.centered}>
-            <Text size="sm" c="dimmed" ta="center">
-              {t('artifactViewer.chunksEmpty')}
-            </Text>
-          </div>
-        );
-      }
-      if (chunksState.kind === 'ready') {
-        return (
-          <div className={styles.chunkListScroll}>
-            {chunksState.chunks.map((chunk, i) => (
-              <ChunkCard key={`${chunk.chunk_index}-${i}`} chunk={chunk} />
-            ))}
-          </div>
-        );
-      }
-      return null;
-    })();
-
-    const showCardTab = isLlm
-      ? !jsonDisplay.invalid && vectorsState.kind !== 'invalid'
-      : !jsonDisplay.invalid;
-
-    const cardTabLabel = isLlm
-      ? jsonVectorsTabLabel(vectorsState, t)
-      : jsonChunksTabLabel(chunksState, t);
-
-    return (
-      <Stack gap="md" className={styles.body}>
-        <Tabs value={jsonTab} onChange={(v) => setJsonTab(v ?? cardTabValue)}>
-          <Tabs.List className={styles.tabsList}>
-            {showCardTab ? (
-              <Tabs.Tab value={cardTabValue}>{cardTabLabel}</Tabs.Tab>
-            ) : null}
-            <Tabs.Tab value="raw">{t('artifactViewer.tabRaw')}</Tabs.Tab>
-          </Tabs.List>
-          {showCardTab ? (
-            <Tabs.Panel value={cardTabValue} pt="sm">
-              {cardsPanelInner}
-            </Tabs.Panel>
-          ) : null}
-          <Tabs.Panel value="raw" pt="sm">
-            <Stack gap="xs">
-              {jsonDisplay.largeRaw ? (
-                <Alert
-                  variant="light"
-                  color="gray"
-                  icon={<IconInfoCircle size={18} stroke={1.8} />}
-                >
-                  {t('artifactViewer.largeJsonRaw')}
-                </Alert>
-              ) : null}
-              {jsonDisplay.invalid ? (
-                <Text size="sm" c="dimmed" className={styles.invalidJsonNote}>
-                  {t('artifactViewer.invalidJsonNote')}
-                </Text>
-              ) : null}
-              <div className={styles.scrollSurface}>
-                <pre className={styles.codeBlock}>
-                  <code ref={jsonCodeRef} />
-                </pre>
-              </div>
-            </Stack>
-          </Tabs.Panel>
-        </Tabs>
-      </Stack>
-    );
-  })();
+  const body = artifactViewerModalBody({
+    t,
+    opened,
+    path,
+    phase,
+    fetchError,
+    kind,
+    mode,
+    content,
+    isEmptySuccess,
+    markdownTab,
+    setMarkdownTab,
+    markdownPreviewPhase,
+    markdownPreviewHtml,
+    previewHostRef,
+    rawMarkdownRef,
+    jsonPreparePhase,
+    jsonTab,
+    setJsonTab,
+    jsonDisplay,
+    jsonCodeRef,
+  });
 
   const errorFallback = (
     <Paper className={styles.body} p="md" withBorder radius="sm">

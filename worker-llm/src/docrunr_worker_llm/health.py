@@ -548,7 +548,15 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         target_path = requested_path.strip()
-        if not _is_allowed_output_path(target_path):
+        parsed_path = PurePosixPath(target_path)
+        path_ok = (
+            not parsed_path.is_absolute()
+            and bool(parsed_path.parts)
+            and parsed_path.parts[0] == "output"
+            and not any(part in {"", ".", ".."} for part in parsed_path.parts)
+            and parsed_path.suffix.lower() == ".json"
+        )
+        if not path_ok:
             self.send_error(400, "Invalid output path")
             return
 
@@ -665,14 +673,3 @@ def start_health_server(
     thread.start()
     logger.info("LLM worker health server listening on :%d", port)
     return thread
-
-
-def _is_allowed_output_path(path: str) -> bool:
-    parsed = PurePosixPath(path)
-    if parsed.is_absolute():
-        return False
-    if not parsed.parts or parsed.parts[0] != "output":
-        return False
-    if any(part in {"", ".", ".."} for part in parsed.parts):
-        return False
-    return parsed.suffix.lower() == ".json"

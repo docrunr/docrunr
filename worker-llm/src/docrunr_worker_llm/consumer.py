@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -29,15 +28,6 @@ logger = logging.getLogger(__name__)
 _HEARTBEAT_FLOOR_SECONDS = 60
 _HEARTBEAT_GRACE_SECONDS = 30
 _BLOCKED_TIMEOUT_FLOOR_SECONDS = 300
-
-
-@dataclass(frozen=True)
-class _PendingDelivery:
-    queue_name: str
-    channel: BlockingChannel
-    method: pika.spec.Basic.Deliver
-    body: bytes
-    delivery_id: str
 
 
 class Consumer:
