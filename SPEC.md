@@ -455,7 +455,7 @@ The worker is a thin layer that turns DocRunr into a scalable document processin
 
 It is not a framework. It has no plugin system. It does ship with a bundled operator UI for uploads, queue visibility, and artifact inspection.
 
-**Scalability.** Horizontal scaling via multiple worker containers plus per-container concurrency. `WORKER_CONCURRENCY=1` keeps the inline single-job path. `WORKER_CONCURRENCY=N` allows up to `N` extraction jobs at once inside one worker process by using child processes, and RabbitMQ `prefetch_count` is set to the same `N`. Approximate total in-flight capacity is `replicas × WORKER_CONCURRENCY`, so you can scale with `docker compose up --scale worker=N` and tune per-worker concurrency independently.
+**Scalability.** Horizontal scaling via multiple worker containers plus per-container concurrency. `WORKER_CONCURRENCY=1` keeps the inline single-job path. `WORKER_CONCURRENCY=N` allows up to `N` jobs at once inside one worker process by using child processes, and RabbitMQ `prefetch_count` is set to the same `N`. This applies to both the TXT extraction worker and `worker-llm` (each service reads its own `WORKER_CONCURRENCY`). Approximate total in-flight capacity per service is `replicas × WORKER_CONCURRENCY`, so you can scale with `docker compose up --scale worker=N` (or `worker-llm`) and tune per-worker concurrency independently.
 
 **Reliability.** Manual acknowledgment — extraction messages are acked only after a result is successfully published. If a worker crashes mid-job, RabbitMQ redelivers the message to another worker. Per-job timeouts via `JOB_TIMEOUT_SECONDS` prevent stuck jobs.
 

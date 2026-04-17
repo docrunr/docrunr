@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
+from concurrent.futures import Future, ProcessPoolExecutor
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
@@ -30,12 +33,43 @@ _HEARTBEAT_GRACE_SECONDS = 30
 _BLOCKED_TIMEOUT_FLOOR_SECONDS = 300
 
 
+@dataclass(frozen=True)
+class _PendingDelivery:
+    queue_name: str
+    channel: BlockingChannel
+    method: pika.spec.Basic.Deliver
+    body: bytes
+    delivery_id: str
+
+
+def _run_llm_in_child(
+    body: bytes,
+    settings_payload: dict[str, Any],
+    delivery_id: str,
+) -> LlmOutcome:
+    from docrunr_worker_llm.config import LlmWorkerSettings
+    from docrunr_worker_llm.storage import create_storage
+
+    settings = LlmWorkerSettings.model_validate(settings_payload)
+    storage = create_storage(settings)
+    return handle_llm_job(
+        body=body,
+        storage=storage,
+        settings=settings,
+        delivery_id=delivery_id,
+    )
+
+
 class Consumer:
     def __init__(self, settings: LlmWorkerSettings, storage: StorageBackend) -> None:
         self._settings = settings
         self._storage = storage
+        self._settings_payload = settings.model_dump()
         self._connection: pika.BlockingConnection | None = None
         self._channel: BlockingChannel | None = None
+        self._executor: ProcessPoolExecutor | None = None
+        self._pending_deliveries: dict[Future[LlmOutcome], _PendingDelivery] = {}
+        self._pending_lock = threading.Lock()
         self._stopping = False
 
     def connect(self) -> None:
@@ -111,7 +145,7 @@ class Consumer:
         )
 
     def _result_payload(self, outcome: LlmOutcome) -> dict[str, object] | None:
-        if outcome.result:
+        if isinstance(outcome.result, dict) and outcome.result:
             return outcome.result
         try:
             parsed = json.loads(outcome.result_json)
@@ -120,24 +154,6 @@ class Consumer:
         if isinstance(parsed, dict):
             return parsed
         return None
-
-    def _apply_stats_from_outcome(self, outcome: LlmOutcome) -> None:
-        payload = self._result_payload(outcome)
-        status = outcome.status
-        duration_seconds = outcome.duration_seconds
-
-        if payload is not None:
-            raw_status = payload.get("status")
-            if isinstance(raw_status, str):
-                status = raw_status
-            raw_duration = payload.get("duration_seconds")
-            if isinstance(raw_duration, (int, float)):
-                duration_seconds = float(raw_duration)
-
-        if status == "ok":
-            stats.record_success(duration_seconds)
-        elif status == "error":
-            stats.record_failure()
 
     def _complete_delivery(
         self,
@@ -154,7 +170,6 @@ class Consumer:
             payload_json=outcome.result_json,
         )
         try:
-            self._apply_stats_from_outcome(outcome)
             parsed_outcome = self._result_payload(outcome)
             if parsed_outcome is not None:
                 stats.record_job(parsed_outcome)
@@ -205,7 +220,6 @@ class Consumer:
     def _record_terminal_dlq(self, body: bytes, reason: str, *, delivery_id: str) -> None:
         req = parse_job_request_from_body(body, delivery_id=delivery_id)
         try:
-            stats.record_failure()
             stats.record_job(
                 {
                     "job_id": req.job_id,
@@ -265,6 +279,84 @@ class Consumer:
             else:
                 raise
 
+    def _ensure_executor(self) -> None:
+        if self._settings.worker_concurrency <= 1 or self._executor is not None:
+            return
+        self._executor = ProcessPoolExecutor(max_workers=self._settings.worker_concurrency)
+        logger.info(
+            "Started LLM process pool with max_workers=%d",
+            self._settings.worker_concurrency,
+        )
+
+    def _pop_pending_delivery(self, future: Future[LlmOutcome]) -> _PendingDelivery | None:
+        with self._pending_lock:
+            return self._pending_deliveries.pop(future, None)
+
+    def _get_pending_delivery(self, future: Future[LlmOutcome]) -> _PendingDelivery | None:
+        with self._pending_lock:
+            return self._pending_deliveries.get(future)
+
+    def _finish_future(self, future: Future[LlmOutcome]) -> None:
+        delivery = self._pop_pending_delivery(future)
+        if delivery is None:
+            return
+
+        try:
+            outcome = future.result()
+            self._complete_delivery(
+                delivery.channel,
+                delivery.method,
+                outcome,
+                delivery.body,
+                delivery_id=delivery.delivery_id,
+            )
+        except Exception as exc:
+            self._handle_processing_exception(
+                delivery.queue_name,
+                delivery.channel,
+                delivery.method,
+                delivery.body,
+                exc,
+                delivery_id=delivery.delivery_id,
+            )
+
+    def _on_future_done(self, future: Future[LlmOutcome]) -> None:
+        if self._stopping:
+            return
+
+        delivery = self._get_pending_delivery(future)
+        if delivery is None:
+            return
+        if not delivery.channel.is_open:
+            self._pop_pending_delivery(future)
+            logger.warning(
+                "Dropping completed LLM result because the delivery channel is closed"
+            )
+            return
+
+        connection = self._connection
+        if connection is None or not connection.is_open:
+            self._pop_pending_delivery(future)
+            logger.warning(
+                "Dropping completed LLM result because broker connection is closed"
+            )
+            return
+
+        try:
+            connection.add_callback_threadsafe(lambda: self._finish_future(future))
+        except Exception:
+            self._pop_pending_delivery(future)
+            logger.exception("Failed to schedule LLM completion on broker thread")
+
+    def _drain_pending_futures(self) -> None:
+        while True:
+            with self._pending_lock:
+                futures = list(self._pending_deliveries)
+            if not futures:
+                return
+            for future in futures:
+                self._finish_future(future)
+
     def _on_llm_message(
         self,
         queue_name: str,
@@ -274,23 +366,62 @@ class Consumer:
     ) -> None:
         delivery_id = uuid.uuid4().hex
         self._persist_processing(body, delivery_id=delivery_id)
+        if self._settings.worker_concurrency <= 1:
+            try:
+                outcome = handle_llm_job(
+                    body=body,
+                    storage=self._storage,
+                    settings=self._settings,
+                    delivery_id=delivery_id,
+                )
+                self._complete_delivery(channel, method, outcome, body, delivery_id=delivery_id)
+            except Exception as exc:
+                self._handle_processing_exception(
+                    queue_name, channel, method, body, exc, delivery_id=delivery_id
+                )
+            return
+
+        self._ensure_executor()
+        if self._executor is None:
+            raise RuntimeError("Process pool executor was not initialized")
+
         try:
-            outcome = handle_llm_job(
-                body=body,
-                storage=self._storage,
-                settings=self._settings,
-                delivery_id=delivery_id,
+            future = self._executor.submit(
+                _run_llm_in_child,
+                body,
+                self._settings_payload,
+                delivery_id,
             )
-            self._complete_delivery(channel, method, outcome, body, delivery_id=delivery_id)
+            with self._pending_lock:
+                self._pending_deliveries[future] = _PendingDelivery(
+                    queue_name=queue_name,
+                    channel=channel,
+                    method=method,
+                    body=body,
+                    delivery_id=delivery_id,
+                )
+            future.add_done_callback(self._on_future_done)
         except Exception as exc:
             self._handle_processing_exception(
                 queue_name, channel, method, body, exc, delivery_id=delivery_id
             )
 
+    def _on_message_for_queue(
+        self,
+        queue_name: str,
+        channel: BlockingChannel,
+        method: pika.spec.Basic.Deliver,
+        _props: object,
+        body: bytes,
+    ) -> None:
+        """Backward-compatible callback kept for older tests/callers."""
+        self._on_llm_message(queue_name, channel, method, body)
+
     def start(self) -> None:
         if self._channel is None:
             raise RuntimeError("Call connect() before start()")
 
+        self._ensure_executor()
         for queue_name in self._settings.consumed_queues:
             self._channel.basic_consume(
                 queue=queue_name,
@@ -312,6 +443,10 @@ class Consumer:
         self._stopping = True
         if self._channel and self._channel.is_open:
             self._channel.stop_consuming()
+        self._drain_pending_futures()
+        if self._executor is not None:
+            self._executor.shutdown(wait=True, cancel_futures=False)
+            self._executor = None
         if self._connection and self._connection.is_open:
             self._connection.close()
         logger.info("Consumer stopped")

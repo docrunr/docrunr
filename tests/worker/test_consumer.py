@@ -99,8 +99,6 @@ def test_extraction_publishes_result_and_ack() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job") as record_job,
-        patch("docrunr_worker.consumer.stats.record_success") as record_success,
-        patch("docrunr_worker.consumer.stats.record_failure") as record_failure,
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=_outcome(),
@@ -122,8 +120,6 @@ def test_extraction_publishes_result_and_ack() -> None:
             properties=ANY,
         )
     ]
-    record_success.assert_called_once_with(1.25)
-    record_failure.assert_not_called()
     assert record_job.call_count == 2
     proc = record_job.call_args_list[0].args[0]
     assert proc["status"] == "processing"
@@ -213,8 +209,6 @@ def test_extraction_records_error_when_result_json_is_not_an_object() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job") as record_job,
-        patch("docrunr_worker.consumer.stats.record_success") as record_success,
-        patch("docrunr_worker.consumer.stats.record_failure") as record_failure,
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=ExtractionOutcome(result_json='["not-an-object"]'),
@@ -234,8 +228,6 @@ def test_extraction_records_error_when_result_json_is_not_an_object() -> None:
     assert err["status"] == "error"
     assert err["job_id"] == "job-99"
     assert "non-object" in str(err.get("error", ""))
-    record_success.assert_not_called()
-    record_failure.assert_called_once_with()
     channel.basic_ack.assert_called_once_with(delivery_tag=99)
 
 
@@ -273,10 +265,7 @@ def test_parallel_extraction_completes_two_jobs_and_acks_independent_of_order() 
     method_one = SimpleNamespace(delivery_tag=11, redelivered=False)
     method_two = SimpleNamespace(delivery_tag=12, redelivered=False)
 
-    with (
-        patch("docrunr_worker.consumer.stats.record_job") as record_job,
-        patch("docrunr_worker.consumer.stats.record_success") as record_success,
-    ):
+    with patch("docrunr_worker.consumer.stats.record_job") as record_job:
         consumer._on_message_for_queue(
             "docrunr.jobs",
             channel,
@@ -307,7 +296,6 @@ def test_parallel_extraction_completes_two_jobs_and_acks_independent_of_order() 
         call(delivery_tag=12),
         call(delivery_tag=11),
     ]
-    assert record_success.call_args_list == [call(2.0), call(1.0)]
     terminal = [c.args[0] for c in record_job.call_args_list if c.args[0].get("status") == "ok"]
     assert terminal == [
         {"job_id": "job-2", "status": "ok", "duration_seconds": 2.0},
@@ -357,7 +345,6 @@ def test_llm_followup_published_on_success_with_llm_profile() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job"),
-        patch("docrunr_worker.consumer.stats.record_success"),
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=_outcome_with_llm(llm_profile="embed-local"),
@@ -394,7 +381,6 @@ def test_no_llm_followup_when_llm_profile_absent() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job"),
-        patch("docrunr_worker.consumer.stats.record_success"),
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=_outcome_with_llm(llm_profile=""),
@@ -421,7 +407,6 @@ def test_no_llm_followup_when_extraction_fails() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job"),
-        patch("docrunr_worker.consumer.stats.record_failure"),
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=_outcome_with_llm(
@@ -464,7 +449,6 @@ def test_llm_followup_failure_does_not_block_extraction_ack() -> None:
 
     with (
         patch("docrunr_worker.consumer.stats.record_job"),
-        patch("docrunr_worker.consumer.stats.record_success"),
         patch(
             "docrunr_worker.consumer.handle_extract_job",
             return_value=_outcome_with_llm(llm_profile="embed-local"),

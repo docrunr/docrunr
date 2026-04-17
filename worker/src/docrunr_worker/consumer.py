@@ -168,7 +168,7 @@ class Consumer:
         )
 
     def _result_payload(self, outcome: ExtractionOutcome) -> dict[str, object] | None:
-        if outcome.result:
+        if isinstance(outcome.result, dict) and outcome.result:
             return outcome.result
         try:
             parsed = json.loads(outcome.result_json)
@@ -178,24 +178,6 @@ class Consumer:
         if isinstance(parsed, dict):
             return parsed
         return None
-
-    def _apply_stats_from_outcome(self, outcome: ExtractionOutcome) -> None:
-        payload = self._result_payload(outcome)
-        status = outcome.status
-        duration_seconds = outcome.duration_seconds
-
-        if payload is not None:
-            raw_status = payload.get("status")
-            if isinstance(raw_status, str):
-                status = raw_status
-            raw_duration = payload.get("duration_seconds")
-            if isinstance(raw_duration, (int, float)):
-                duration_seconds = float(raw_duration)
-
-        if status == "ok":
-            stats.record_success(duration_seconds)
-        elif status == "error":
-            stats.record_failure()
 
     def _maybe_publish_llm_followup(
         self,
@@ -265,7 +247,6 @@ class Consumer:
         )
         self._maybe_publish_llm_followup(channel, outcome)
         try:
-            self._apply_stats_from_outcome(outcome)
             parsed_outcome = self._result_payload(outcome)
             if parsed_outcome is not None:
                 stats.record_job(parsed_outcome)
@@ -314,7 +295,6 @@ class Consumer:
     def _record_terminal_dlq(self, body: bytes, reason: str, *, delivery_id: str) -> None:
         req = parse_job_request_from_body(body, delivery_id=delivery_id)
         try:
-            stats.record_failure()
             stats.record_job(
                 {
                     "job_id": req.job_id,

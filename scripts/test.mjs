@@ -125,12 +125,14 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
     env.DOCRUNR_INTEGRATION_STORAGE = 'local';
     env.DOCRUNR_LLM_HEALTH_URL = 'http://127.0.0.1:8081/health';
     // Forward profile selection env var (populated from .env or caller's environment).
-    // INTEGRATION_LLM_PROFILES — comma-separated allowlist; one item pins a single profile
+    // INTEGRATION_LLM_PROFILES — comma-separated allowlist; LLM e2e picks one profile per document
     const pool = env.INTEGRATION_LLM_PROFILES?.trim();
     if (pool) {
-      console.log(`[test:integration:llm] profile pool: ${pool} (random pick)`);
+      console.log(`[test:integration:llm] profile pool: ${pool} (random per document)`);
     } else {
-      console.log('[test:integration:llm] profile pool: live LiteLLM /models list (random pick)');
+      console.log(
+        '[test:integration:llm] profile pool: live LiteLLM /models list (random per document)',
+      );
     }
   } else {
     console.error(`Unknown integration mode: ${mode} (use txt, minio, or llm)`);

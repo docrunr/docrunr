@@ -104,7 +104,7 @@ def available_integration_llm_profiles() -> tuple[str, ...]:
 def integration_llm_profiles(
     available_integration_llm_profiles: tuple[str, ...],
 ) -> tuple[str, ...]:
-    """Configured LLM profile pool for integration tests."""
+    """Candidate LLM profiles; LLM e2e draws one at random per staged document."""
     try:
         return resolve_llm_profile_pool_from_env(all_profiles=available_integration_llm_profiles)
     except ValueError as exc:
@@ -115,7 +115,7 @@ def integration_llm_profiles(
 def integration_llm_profile(
     available_integration_llm_profiles: tuple[str, ...],
 ) -> str:
-    """Selected LLM profile for the current integration test session."""
+    """One random profile from the pool (session). Prefer ``integration_llm_profiles`` when selecting per job."""
     try:
         return resolve_llm_profile_from_env(all_profiles=available_integration_llm_profiles)
     except ValueError as exc:

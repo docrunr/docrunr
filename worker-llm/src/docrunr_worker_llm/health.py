@@ -88,12 +88,6 @@ class LlmWorkerStats:
         with self._lock:
             self._job_store = job_store
 
-    def record_success(self, _duration: float) -> None:  # skylos: ignore
-        """No-op: aggregate stats come from :meth:`record_job`."""
-
-    def record_failure(self) -> None:
-        """No-op: aggregate stats come from :meth:`record_job`."""
-
     @property
     def avg_duration(self) -> float:
         with self._lock:

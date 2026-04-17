@@ -13,19 +13,21 @@ worker-llm health on ``8081``.
 Profile selection
 ~~~~~~~~~~~~~~~~~
 
-By default a **random** profile is picked from the live LiteLLM ``/models`` list each run.
+For each staged document, a **random** profile is chosen from the candidate pool (with
+replacement). The pool is the live LiteLLM ``/models`` list unless narrowed by env.
 
 Narrow the pool via env vars:
 
 - ``INTEGRATION_LLM_PROFILES=nomic-embed-text-137m,bge-m3-560m``  — allowlist
-- ``INTEGRATION_LLM_PROFILES=nomic-embed-text-137m``              — pin one profile
+- ``INTEGRATION_LLM_PROFILES=nomic-embed-text-137m``              — every job uses that profile
 
-The random pick draws from ``INTEGRATION_LLM_PROFILES`` (or all when empty).
+Each draw uses ``INTEGRATION_LLM_PROFILES`` when set, otherwise all models from LiteLLM.
 """
 
 from __future__ import annotations
 
 import os
+import random
 from pathlib import Path
 from typing import Any
 
@@ -91,18 +93,27 @@ def _print_llm_summary(
     staged: list[tuple[str, str, Path]],
     extraction_results: dict[str, dict[str, Any]],
     llm_results: dict[str, dict[str, Any]],
-    llm_profile: str,
+    job_profiles: dict[str, str],
 ) -> None:
     ok_extractions = [jid for jid, r in extraction_results.items() if r.get("status") == "ok"]
     llm_ok = sum(1 for r in llm_results.values() if r.get("status") == "ok")
-    line = "=" * 72
+    line = "=" * 96
+    unique_profiles = sorted({job_profiles[jid] for jid, _, _ in staged})
+    profiles_note = (
+        f"unique profiles: {len(unique_profiles)} ({', '.join(unique_profiles)})"
+        if unique_profiles
+        else "profiles: (none)"
+    )
     print(f"\n{line}")
     print(
         f"LLM integration — {llm_ok}/{len(ok_extractions)} embeddings OK  "
-        f"(profile: {llm_profile})"
+        f"({profiles_note})"
     )
     print(line)
-    header = f"{'#':>3}  {'filename':<36}  {'extract':<8}  {'llm':<8}  {'vectors':>7}"
+    header = (
+        f"{'#':>3}  {'filename':<28}  {'profile':<22}  "
+        f"{'extract':<8}  {'llm':<8}  {'vectors':>7}"
+    )
     print(header)
     print("-" * len(header))
     for idx, (job_id, _rel, sample) in enumerate(staged, start=1):
@@ -112,16 +123,19 @@ def _print_llm_summary(
         llm_status = str(llm_row.get("status", "-"))
         vectors = llm_row.get("vector_count", "")
         name = sample.name
-        if len(name) > 36:
-            name = name[:33] + "..."
-        print(f"{idx:>3}  {name:<36}  {ext_status:<8}  {llm_status:<8}  {vectors!s:>7}")
+        if len(name) > 28:
+            name = name[:25] + "..."
+        prof = job_profiles.get(job_id, "?")
+        if len(prof) > 22:
+            prof = prof[:19] + "..."
+        print(f"{idx:>3}  {name:<28}  {prof:<22}  {ext_status:<8}  {llm_status:<8}  {vectors!s:>7}")
     print(line)
 
 
 def test_extraction_with_llm_produces_embeddings(
     resolved_worker_e2e_samples: list[Path],
     integration_storage: IntegrationStorage,
-    integration_llm_profile: str,
+    integration_llm_profiles: tuple[str, ...],
 ) -> None:
     """Stage N samples, publish with llm_profile, wait for extraction + LLM results."""
     _require_services()
@@ -139,14 +153,18 @@ def test_extraction_with_llm_produces_embeddings(
 
         staged: list[tuple[str, str, Path]] = []
         expected: set[str] = set()
+        job_profiles: dict[str, str] = {}
         for sample in samples:
             job_id = new_job_id()
             rel = integration_storage.stage_input(sample, job_id)
             expected.add(job_id)
             staged.append((job_id, rel, sample))
+            job_profiles[job_id] = random.choice(integration_llm_profiles)
 
         for job_id, rel, sample in staged:
-            body = job_message_bytes(job_id, sample.name, rel, llm_profile=integration_llm_profile)
+            body = job_message_bytes(
+                job_id, sample.name, rel, llm_profile=job_profiles[job_id]
+            )
             publish_job(ch, body)
 
         # Hop 1: collect extraction results
@@ -215,7 +233,7 @@ def test_extraction_with_llm_produces_embeddings(
 
     # Reports
     emit_integration_report(integration_storage.report_dir, staged, extraction_results)
-    _print_llm_summary(staged, extraction_results, llm_results, integration_llm_profile)
+    _print_llm_summary(staged, extraction_results, llm_results, job_profiles)
 
     assert llm_ok_count > 0, (
         f"All {len(ok_ids)} LLM jobs failed — no embeddings produced.\n"
