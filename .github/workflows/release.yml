@@ -93,10 +93,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux/amd64
+          - image_kind: worker
+            dockerfile: Dockerfile
+            image_repo_suffix: docrunr
+            platform: linux/amd64
             platform_suffix: amd64
             needs_qemu: false
-          - platform: linux/arm64
+          - image_kind: worker
+            dockerfile: Dockerfile
+            image_repo_suffix: docrunr
+            platform: linux/arm64
+            platform_suffix: arm64
+            needs_qemu: true
+          - image_kind: llm
+            dockerfile: Dockerfile.llm
+            image_repo_suffix: docrunr-llm
+            platform: linux/amd64
+            platform_suffix: amd64
+            needs_qemu: false
+          - image_kind: llm
+            dockerfile: Dockerfile.llm
+            image_repo_suffix: docrunr-llm
+            platform: linux/arm64
             platform_suffix: arm64
             needs_qemu: true
     permissions:
@@ -128,7 +146,7 @@ jobs:
         run: |
           REF_NAME="${GITHUB_REF_NAME:-manual}"
           VERSION="${REF_NAME#v}"
-          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/docrunr"
+          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${{ matrix.image_repo_suffix }}"
           echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
@@ -144,6 +162,7 @@ jobs:
         id: build
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           provenance: false
           build-args: |
@@ -160,7 +179,7 @@ jobs:
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.platform_suffix }}
+          name: digests-${{ matrix.image_kind }}-${{ matrix.platform_suffix }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -168,6 +187,14 @@ jobs:
   publish-docker-manifest:
     runs-on: ubuntu-latest
     needs: publish-docker
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_kind: worker
+            image_repo_suffix: docrunr
+          - image_kind: llm
+            image_repo_suffix: docrunr-llm
     permissions:
       contents: read
       packages: write
@@ -180,14 +207,14 @@ jobs:
         run: |
           REF_NAME="${GITHUB_REF_NAME:-manual}"
           VERSION="${REF_NAME#v}"
-          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/docrunr"
+          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${{ matrix.image_repo_suffix }}"
           echo "image_repo=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download digest artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: digests-*
+          pattern: digests-${{ matrix.image_kind }}-*
           path: /tmp/digests
           merge-multiple: true
 
