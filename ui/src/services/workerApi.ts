@@ -1,5 +1,7 @@
 import type {
   AnyJobsResponse,
+  LlmProfileOption,
+  LlmProfilesResponse,
   UploadDocumentsResponse,
   WorkerAuthSession,
   WorkerMode,
@@ -139,12 +141,26 @@ export function fetchJobs(
   );
 }
 
-export async function uploadDocuments(files: File[]): Promise<UploadDocumentsResponse> {
+export async function fetchLlmProfiles(): Promise<LlmProfileOption[]> {
+  const response = await getJson<LlmProfilesResponse>(llmApiUrl('/llm-profiles'));
+  return response.items;
+}
+
+export async function uploadDocuments(
+  files: File[],
+  options?: { llmProfile?: string }
+): Promise<UploadDocumentsResponse> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append('files', file);
   });
-  const response = await fetch(workerApiUrl('/uploads'), {
+  const params: Record<string, string> = {};
+  if (options?.llmProfile) {
+    params.llm_profile = options.llmProfile;
+  }
+  const qs = new URLSearchParams(params).toString();
+  const url = workerApiUrl('/uploads') + (qs ? `?${qs}` : '');
+  const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
     body: formData,

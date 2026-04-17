@@ -2,11 +2,28 @@
 # Profiles listed here are the model_name values DocRunr sends as llm_profile.
 # See https://docs.litellm.ai/docs/proxy/configs
 #
-# Docker (docker-compose.ollama.yml): pull names via OLLAMA_EMBED_MODELS (comma-separated) or
-# OLLAMA_EMBED_MODEL; each must exist as an Ollama model tag matching the `ollama/...` names you use.
+# Docker (docker-compose.ollama.yml): pull names via OLLAMA_EMBED_MODELS (comma-separated);
+# each must exist as an Ollama model tag matching the `ollama/...` names you use.
+#
+#   nomic-embed-text-137m  137M  nomic-embed-text   8192 ctx, Matryoshka dims
+#   embedding-gemma-300m   300M  embeddinggemma     2048 ctx, multilingual
+#   bge-m3-560m            560M  bge-m3             hybrid dense+sparse+multi-vector
+#   qwen3-embedding-8b       8B  qwen3-embedding:8b highest quality
 
 model_list:
-  - model_name: embed-local
+  - model_name: nomic-embed-text-137m
     litellm_params:
       model: ollama/nomic-embed-text
+      api_base: os.environ/OLLAMA_API_BASE
+  - model_name: embedding-gemma-300m
+    litellm_params:
+      model: ollama/embeddinggemma
+      api_base: os.environ/OLLAMA_API_BASE
+  - model_name: bge-m3-560m
+    litellm_params:
+      model: ollama/bge-m3
+      api_base: os.environ/OLLAMA_API_BASE
+  - model_name: qwen3-embedding-8b
+    litellm_params:
+      model: ollama/qwen3-embedding:8b
       api_base: os.environ/OLLAMA_API_BASE

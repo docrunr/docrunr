@@ -9,6 +9,18 @@ Prerequisites::
 
 Tests run on the host: RabbitMQ on ``127.0.0.1:5672``, worker health on ``8080``,
 worker-llm health on ``8081``.
+
+Profile selection
+~~~~~~~~~~~~~~~~~
+
+By default a **random** profile is picked from the live LiteLLM ``/models`` list each run.
+
+Narrow the pool via env vars:
+
+- ``INTEGRATION_LLM_PROFILES=nomic-embed-text-137m,bge-m3-560m``  — allowlist
+- ``INTEGRATION_LLM_PROFILES=nomic-embed-text-137m``              — pin one profile
+
+The random pick draws from ``INTEGRATION_LLM_PROFILES`` (or all when empty).
 """
 
 from __future__ import annotations
@@ -39,8 +51,6 @@ from tests.integration.rmq_helpers import (
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.llm_jobs]
-
-LLM_PROFILE = os.environ.get("INTEGRATION_LLM_PROFILE", "embed-local")
 
 
 def _results_timeout_seconds(job_count: int) -> float:
@@ -81,12 +91,16 @@ def _print_llm_summary(
     staged: list[tuple[str, str, Path]],
     extraction_results: dict[str, dict[str, Any]],
     llm_results: dict[str, dict[str, Any]],
+    llm_profile: str,
 ) -> None:
     ok_extractions = [jid for jid, r in extraction_results.items() if r.get("status") == "ok"]
     llm_ok = sum(1 for r in llm_results.values() if r.get("status") == "ok")
     line = "=" * 72
     print(f"\n{line}")
-    print(f"LLM integration — {llm_ok}/{len(ok_extractions)} embeddings OK")
+    print(
+        f"LLM integration — {llm_ok}/{len(ok_extractions)} embeddings OK  "
+        f"(profile: {llm_profile})"
+    )
     print(line)
     header = f"{'#':>3}  {'filename':<36}  {'extract':<8}  {'llm':<8}  {'vectors':>7}"
     print(header)
@@ -107,6 +121,7 @@ def _print_llm_summary(
 def test_extraction_with_llm_produces_embeddings(
     resolved_worker_e2e_samples: list[Path],
     integration_storage: IntegrationStorage,
+    integration_llm_profile: str,
 ) -> None:
     """Stage N samples, publish with llm_profile, wait for extraction + LLM results."""
     _require_services()
@@ -131,7 +146,7 @@ def test_extraction_with_llm_produces_embeddings(
             staged.append((job_id, rel, sample))
 
         for job_id, rel, sample in staged:
-            body = job_message_bytes(job_id, sample.name, rel, llm_profile=LLM_PROFILE)
+            body = job_message_bytes(job_id, sample.name, rel, llm_profile=integration_llm_profile)
             publish_job(ch, body)
 
         # Hop 1: collect extraction results
@@ -200,7 +215,7 @@ def test_extraction_with_llm_produces_embeddings(
 
     # Reports
     emit_integration_report(integration_storage.report_dir, staged, extraction_results)
-    _print_llm_summary(staged, extraction_results, llm_results)
+    _print_llm_summary(staged, extraction_results, llm_results, integration_llm_profile)
 
     assert llm_ok_count > 0, (
         f"All {len(ok_ids)} LLM jobs failed — no embeddings produced.\n"

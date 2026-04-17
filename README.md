@@ -68,7 +68,7 @@ If the TXT container fails to start with “bind: address already in use” on *
 docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
 ```
 
-**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which **`ollama pull`s** each configured model before **`exec ollama serve`**. Set **`OLLAMA_EMBED_MODELS`** to a comma-separated list (e.g. `nomic-embed-text,llama3.2`), or a single name via **`OLLAMA_EMBED_MODEL`** (used when **`OLLAMA_EMBED_MODELS`** is empty).
+**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which **`ollama pull`s** each configured model before **`exec ollama serve`**. Set **`OLLAMA_EMBED_MODELS`** to a comma-separated list (e.g. `nomic-embed-text,embeddinggemma,bge-m3`). The default pulls all four models configured in `litellm.yaml`.
 
 ```bash
 # Dev mode (host Ollama via brew; TXT on 8080, worker-llm on 8081):
@@ -91,7 +91,7 @@ Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_
   "source_path": "input/…/….pdf",
   "options": {},
   "priority": 0,
-  "llm_profile": "embed-local"
+  "llm_profile": "nomic-embed-text-137m"
 }
 ```
 
@@ -108,7 +108,7 @@ Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_
   "duration_seconds": 0,
   "error": null,
   "priority": 0,
-  "llm_profile": "embed-local"
+  "llm_profile": "nomic-embed-text-137m"
 }
 ```
 
@@ -125,7 +125,7 @@ LLM job (`docrunr.llm.jobs`): `job_id`, `extract_job_id`, `filename`, `source_pa
   "filename": "report.pdf",
   "source_path": "input/2026/04/15/00/original-uuid.pdf",
   "chunks_path": "output/2026/04/15/00/original-uuid.json",
-  "llm_profile": "embed-local",
+  "llm_profile": "nomic-embed-text-137m",
   "priority": 0,
   "metadata": {}
 }
@@ -141,7 +141,7 @@ LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artif
   "filename": "report.pdf",
   "source_path": "input/…/….pdf",
   "chunks_path": "output/…/….json",
-  "llm_profile": "embed-local",
+  "llm_profile": "nomic-embed-text-137m",
   "provider": "ollama",
   "chunk_count": 12,
   "vector_count": 12,

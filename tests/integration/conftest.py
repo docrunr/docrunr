@@ -7,6 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.fixtures import (
+    fetch_litellm_profiles_from_env,
+    resolve_llm_profile_from_env,
+    resolve_llm_profile_pool_from_env,
+)
 from tests.integration.fixtures.sample_sources import (
     iter_sample_files,
     repeat_to_count,
@@ -84,3 +89,34 @@ def resolved_worker_e2e_samples(
 def integration_storage(repo_root: Path) -> IntegrationStorage:
     """Host-side storage matching the running worker (``DOCRUNR_INTEGRATION_STORAGE``)."""
     return integration_storage_from_env(repo_root)
+
+
+@pytest.fixture(scope="session")
+def available_integration_llm_profiles() -> tuple[str, ...]:
+    """Live LiteLLM profile list available to the integration test runner."""
+    try:
+        return fetch_litellm_profiles_from_env()
+    except RuntimeError as exc:
+        pytest.skip(f"LiteLLM model list not reachable for integration test selection ({exc})")
+
+
+@pytest.fixture(scope="session")
+def integration_llm_profiles(
+    available_integration_llm_profiles: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Configured LLM profile pool for integration tests."""
+    try:
+        return resolve_llm_profile_pool_from_env(all_profiles=available_integration_llm_profiles)
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc
+
+
+@pytest.fixture(scope="session")
+def integration_llm_profile(
+    available_integration_llm_profiles: tuple[str, ...],
+) -> str:
+    """Selected LLM profile for the current integration test session."""
+    try:
+        return resolve_llm_profile_from_env(all_profiles=available_integration_llm_profiles)
+    except ValueError as exc:
+        raise pytest.UsageError(str(exc)) from exc

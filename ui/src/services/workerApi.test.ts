@@ -3,6 +3,7 @@ import { registerSessionUnauthorizedHandler } from './sessionInvalidate';
 import {
   fetchAuthSession,
   fetchJobs,
+  fetchLlmProfiles,
   loginWorkerUi,
   uploadDocuments,
   workerApiUrl,
@@ -64,6 +65,26 @@ describe('workerApi', () => {
     await expect(fetchJobs({})).rejects.toThrow();
 
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetchLlmProfiles uses the llm API path', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [{ value: 'nomic-embed-text-137m', label: 'Nomic Embed Text (137M)' }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const items = await fetchLlmProfiles();
+
+    expect(items).toEqual([
+      { value: 'nomic-embed-text-137m', label: 'Nomic Embed Text (137M)' },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:8080/llm-api/llm-profiles',
+      expect.objectContaining({ credentials: 'include' })
+    );
   });
 
   it('workerFetch notifies session handler on 401', async () => {

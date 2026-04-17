@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadDocuments } from '../../../services/workerApi';
+import type { WorkerMode } from '../../../services/workerApi.types';
 import type { SelectedUploadFile } from '../types';
 
-export function useDocumentUpload() {
+export function useDocumentUpload(mode: WorkerMode) {
   const [queue, setQueue] = useState<SelectedUploadFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchTotal, setBatchTotal] = useState(0);
@@ -10,13 +11,25 @@ export function useDocumentUpload() {
   const [successCount, setSuccessCount] = useState(0);
   const [failCount, setFailCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [llmProfile, setLlmProfile] = useState<string>('');
 
   const queueRef = useRef(queue);
   const processingRef = useRef(false);
+  const llmProfileRef = useRef(llmProfile);
 
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
+
+  useEffect(() => {
+    llmProfileRef.current = llmProfile;
+  }, [llmProfile]);
+
+  useEffect(() => {
+    if (mode !== 'llm') {
+      setLlmProfile('');
+    }
+  }, [mode]);
 
   const addFiles = useCallback((list: File[]) => {
     if (!list.length) {
@@ -63,12 +76,15 @@ export function useDocumentUpload() {
     setSuccessCount(0);
     setFailCount(0);
 
+    const profile = mode === 'llm' ? llmProfileRef.current : '';
+    const opts = profile ? { llmProfile: profile } : undefined;
+
     for (let i = 0; i < snapshot.length; i++) {
       const item = snapshot[i];
       setCurrentIndex(i + 1);
 
       try {
-        const res = await uploadDocuments([item.file]);
+        const res = await uploadDocuments([item.file], opts);
         const row = res.items[0];
         setQueue((q) => q.filter((p) => p.id !== item.id));
 
@@ -88,7 +104,7 @@ export function useDocumentUpload() {
     processingRef.current = false;
     setBatchTotal(0);
     setCurrentIndex(0);
-  }, []);
+  }, [mode]);
 
   return {
     queue,
@@ -98,6 +114,8 @@ export function useDocumentUpload() {
     successCount,
     failCount,
     error,
+    llmProfile,
+    setLlmProfile,
     addFiles,
     removeFile,
     clearQueue,

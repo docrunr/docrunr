@@ -1,6 +1,21 @@
-import { ActionIcon, Alert, Box, Button, Group, Modal, Paper, Stack, Text } from '@mantine/core';
+import {
+  ActionIcon,
+  Alert,
+  Box,
+  Button,
+  Group,
+  Modal,
+  Paper,
+  Select,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { IconInfoCircle, IconPlaylistAdd, IconTrash } from '@tabler/icons-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useWorkerMode } from '../../../contexts/useWorkerMode';
+import { fetchLlmProfiles } from '../../../services/workerApi';
+import type { LlmProfileOption } from '../../../services/workerApi.types';
 import { useDocumentUpload } from '../hooks/useDocumentUpload';
 import { UploadDropzone } from './UploadDropzone';
 import { UploadQueueSummary } from './UploadQueueSummary';
@@ -12,6 +27,7 @@ type UploadModalProps = {
 
 export function UploadModal({ opened, onClose }: UploadModalProps) {
   const { t } = useTranslation();
+  const { mode } = useWorkerMode();
   const {
     queue,
     isProcessing,
@@ -20,12 +36,17 @@ export function UploadModal({ opened, onClose }: UploadModalProps) {
     successCount,
     failCount,
     error,
+    llmProfile,
+    setLlmProfile,
     addFiles,
     removeFile,
     clearQueue,
     reset,
     submit,
-  } = useDocumentUpload();
+  } = useDocumentUpload(mode);
+  const [profileOptions, setProfileOptions] = useState<LlmProfileOption[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
 
   const handleClose = () => {
     reset();
@@ -34,6 +55,57 @@ export function UploadModal({ opened, onClose }: UploadModalProps) {
 
   const locked = isProcessing;
   const hasQueue = queue.length > 0;
+  const isLlmMode = mode === 'llm';
+
+  useEffect(() => {
+    if (!opened || !isLlmMode) {
+      setProfilesLoading(false);
+      setProfilesError(null);
+      setProfileOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setProfilesLoading(true);
+    setProfilesError(null);
+
+    void fetchLlmProfiles()
+      .then((items) => {
+        if (cancelled) {
+          return;
+        }
+        setProfileOptions(items);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setProfilesError(error instanceof Error ? error.message : 'unknown');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setProfilesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [opened, isLlmMode]);
+
+  useEffect(() => {
+    if (!isLlmMode || profilesLoading || profilesError) {
+      return;
+    }
+    if (llmProfile && !profileOptions.some((option) => option.value === llmProfile)) {
+      setLlmProfile('');
+    }
+  }, [isLlmMode, llmProfile, profileOptions, profilesLoading, profilesError, setLlmProfile]);
+
+  const selectData = useMemo(
+    () => [{ value: '', label: t('upload.llmProfileNone') }, ...profileOptions],
+    [profileOptions, t]
+  );
 
   return (
     <Modal
@@ -66,6 +138,27 @@ export function UploadModal({ opened, onClose }: UploadModalProps) {
         >
           {t('upload.workerAlert')}
         </Alert>
+
+        {isLlmMode ? (
+          <>
+            <Select
+              label={t('upload.llmProfileLabel')}
+              description={t('upload.llmProfileHint')}
+              placeholder={t('upload.llmProfileNone')}
+              data={selectData}
+              value={llmProfile}
+              onChange={(v) => setLlmProfile(v ?? '')}
+              disabled={locked || profilesLoading || (!!profilesError && profileOptions.length === 0)}
+              clearable
+              allowDeselect
+            />
+            {profilesError ? (
+              <Alert variant="light" color="yellow" title={t('upload.llmProfileLoadErrorTitle')}>
+                {t('upload.llmProfileLoadError')}
+              </Alert>
+            ) : null}
+          </>
+        ) : null}
 
         <Paper
           withBorder

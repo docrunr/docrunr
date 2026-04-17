@@ -108,7 +108,7 @@ function cmdSamples(include) {
 async function cmdIntegration(mode, sampleSource, sampleCount) {
   const dotenv = await loadDotEnv(path.join(REPO_ROOT, '.env'));
   /** @type {NodeJS.ProcessEnv} */
-  const env = { ...process.env, ...dotenv };
+  const env = { ...dotenv, ...process.env };
 
   env.RABBITMQ_HOST = '127.0.0.1';
 
@@ -124,6 +124,14 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
   } else if (mode === 'llm') {
     env.DOCRUNR_INTEGRATION_STORAGE = 'local';
     env.DOCRUNR_LLM_HEALTH_URL = 'http://127.0.0.1:8081/health';
+    // Forward profile selection env var (populated from .env or caller's environment).
+    // INTEGRATION_LLM_PROFILES — comma-separated allowlist; one item pins a single profile
+    const pool = env.INTEGRATION_LLM_PROFILES?.trim();
+    if (pool) {
+      console.log(`[test:integration:llm] profile pool: ${pool} (random pick)`);
+    } else {
+      console.log('[test:integration:llm] profile pool: live LiteLLM /models list (random pick)');
+    }
   } else {
     console.error(`Unknown integration mode: ${mode} (use txt, minio, or llm)`);
     process.exit(1);

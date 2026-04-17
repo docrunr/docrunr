@@ -3,15 +3,14 @@
 #   docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml up
 #
 # Entrypoint script pulls model(s) before `ollama serve` is PID 1 (Ollama's HTTP API does not
-# auto-pull). Use OLLAMA_EMBED_MODELS (comma-separated) or OLLAMA_EMBED_MODEL (see .env.example).
+# auto-pull). Use OLLAMA_EMBED_MODELS (comma-separated). Names must match litellm.yaml.
 
 services:
   ollama:
     image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
     restart: unless-stopped
     environment:
-      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
-      OLLAMA_EMBED_MODELS: ${OLLAMA_EMBED_MODELS:-}
+      OLLAMA_EMBED_MODELS: ${OLLAMA_EMBED_MODELS:-nomic-embed-text,embeddinggemma,bge-m3,qwen3-embedding:8b}
     volumes:
       - ./.data/ollama:/root/.ollama
       - ./scripts/ollama-docker-entrypoint.sh:/docrunr-ollama-entrypoint.sh:ro

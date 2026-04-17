@@ -1,5 +1,10 @@
 export type WorkerMode = 'txt' | 'llm';
 
+export type LlmProfileOption = {
+  value: string;
+  label: string;
+};
+
 type WorkerHealth = {
   status: string;
   rabbitmq: string;
@@ -104,6 +109,11 @@ type UploadResponseItem = UploadQueuedItem | UploadErrorItem;
 
 export type UploadDocumentsResponse = {
   items: UploadResponseItem[];
+  error?: string;
+};
+
+export type LlmProfilesResponse = {
+  items: LlmProfileOption[];
   error?: string;
 };
 

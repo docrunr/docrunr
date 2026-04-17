@@ -516,6 +516,8 @@ class _Handler(BaseHTTPRequestHandler):
         except InvalidJobPriorityError as exc:
             self._json_response_with_status({"error": str(exc), "items": []}, 400)
             return
+        raw_llm_profile = params.get("llm_profile", [None])[0]
+        llm_profile = raw_llm_profile.strip() if isinstance(raw_llm_profile, str) else ""
         try:
             result = process_upload_request(
                 body=body,
@@ -523,6 +525,7 @@ class _Handler(BaseHTTPRequestHandler):
                 storage=ctx.storage,
                 settings=ctx.settings,
                 priority=priority,
+                llm_profile=llm_profile,
             )
         except UploadRequestError as exc:
             self._json_response_with_status({"error": str(exc), "items": []}, 400)

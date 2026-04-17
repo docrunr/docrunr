@@ -16,7 +16,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path, PurePosixPath
+import re
 from typing import TYPE_CHECKING, Any, cast
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
 
 from docrunr_worker_llm.config import LlmWorkerSettings
@@ -298,6 +301,107 @@ def set_artifact_storage(storage: StorageBackend | None) -> None:
     _ARTIFACT_STORAGE = storage
 
 
+_PROFILE_SIZE_TOKEN_RE = re.compile(r"^(\d+)([mb])$", re.IGNORECASE)
+_PROFILE_TOKEN_LABELS: dict[str, str] = {
+    "bge": "BGE",
+    "embed": "Embed",
+    "embedding": "Embedding",
+    "gemma": "Gemma",
+    "m3": "M3",
+    "nomic": "Nomic",
+    "qwen3": "Qwen3",
+    "text": "Text",
+}
+
+
+def _humanize_llm_profile_name(profile: str) -> str:
+    tokens = [token for token in profile.replace("_", "-").split("-") if token]
+    if not tokens:
+        return profile
+
+    size_label = ""
+    size_match = _PROFILE_SIZE_TOKEN_RE.fullmatch(tokens[-1])
+    if size_match:
+        size_label = f"{size_match.group(1)}{size_match.group(2).upper()}"
+        tokens = tokens[:-1]
+
+    words: list[str] = []
+    for token in tokens:
+        lowered = token.lower()
+        words.append(_PROFILE_TOKEN_LABELS.get(lowered, token.capitalize()))
+
+    base = " ".join(words) if words else profile
+    return f"{base} ({size_label})" if size_label else base
+
+
+def _label_for_litellm_profile_item(raw: dict[str, object], profile: str) -> str:
+    for key in ("label", "display_name", "description"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    model_info = raw.get("model_info")
+    if isinstance(model_info, dict):
+        for key in ("label", "display_name", "description"):
+            value = model_info.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+    return _humanize_llm_profile_name(profile)
+
+
+def _normalize_llm_profile_items(payload: object) -> list[dict[str, str]]:
+    raw_items = payload
+    if isinstance(payload, dict):
+        raw_items = payload.get("data", [])
+    if not isinstance(raw_items, list):
+        return []
+
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        profile = ""
+        label = ""
+        if isinstance(raw, str):
+            profile = raw.strip()
+            label = _humanize_llm_profile_name(profile)
+        elif isinstance(raw, dict):
+            for key in ("model_name", "id", "model"):
+                value = raw.get(key)
+                if isinstance(value, str) and value.strip():
+                    profile = value.strip()
+                    break
+            if profile:
+                label = _label_for_litellm_profile_item(raw, profile)
+        if not profile or profile in seen:
+            continue
+        seen.add(profile)
+        items.append({"value": profile, "label": label or profile})
+    return items
+
+
+def _fetch_litellm_profile_items(ws: LlmWorkerSettings) -> list[dict[str, str]]:
+    base_url = ws.litellm_base_url.rstrip("/")
+    url = f"{base_url}/models"
+    headers = {"Accept": "application/json"}
+    if ws.litellm_api_key.strip():
+        headers["Authorization"] = f"Bearer {ws.litellm_api_key.strip()}"
+
+    request = Request(url, headers=headers, method="GET")
+    try:
+        with urlopen(request, timeout=float(ws.litellm_timeout_seconds)) as response:
+            body = response.read()
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise RuntimeError(f"LiteLLM model list request failed: {exc}") from exc
+
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("LiteLLM model list returned invalid JSON") from exc
+
+    return _normalize_llm_profile_items(payload)
+
+
 class _Handler(BaseHTTPRequestHandler):
     @staticmethod
     def _http_settings() -> LlmWorkerSettings:
@@ -409,6 +513,15 @@ class _Handler(BaseHTTPRequestHandler):
             self._json_response(stats.stats_dict())
         elif path == "/api/overview":
             self._json_response(stats.overview_dict())
+        elif path == "/api/llm-profiles":
+            try:
+                self._json_response({"items": _fetch_litellm_profile_items(ws)})
+            except RuntimeError:
+                logger.exception("Failed to load LiteLLM profile list")
+                self._json_response_with_status(
+                    {"error": "Failed to load LLM profiles", "items": []},
+                    502,
+                )
         elif path == "/api/jobs":
             params = parse_qs(parsed.query)
             try:

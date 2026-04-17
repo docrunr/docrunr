@@ -4,8 +4,12 @@
 # then execs `ollama serve` as PID 1 for correct signal handling.
 #
 # Models to pull (comma-separated, no spaces inside names):
-#   1) OLLAMA_EMBED_MODELS if non-empty — e.g. "nomic-embed-text,llama3.2"
-#   2) else OLLAMA_EMBED_MODEL — single name, default nomic-embed-text
+#   OLLAMA_EMBED_MODELS — must match the Ollama model tags litellm.yaml maps from.
+#   The litellm model names (ege-m3-560m, etc.) are litellm aliases; the underlying
+#   Ollama model tags are the values in litellm.yaml's `model: ollama/<tag>`.
+#   Always use the Ollama-native tag (e.g. "bge-m3", NOT "bge-m3-560m").
+#   Example: "nomic-embed-text,bge-m3,embeddinggemma,qwen3-embedding:8b"
+#   Falls back to "nomic-embed-text" when empty.
 set -e
 
 ollama serve &
@@ -28,11 +32,7 @@ if ! ollama list >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ -n "${OLLAMA_EMBED_MODELS:-}" ]; then
-  _raw="$OLLAMA_EMBED_MODELS"
-else
-  _raw="${OLLAMA_EMBED_MODEL:-nomic-embed-text}"
-fi
+_raw="${OLLAMA_EMBED_MODELS:-nomic-embed-text}"
 
 echo "[ollama-entrypoint] ensuring models (from env): ${_raw}"
 
