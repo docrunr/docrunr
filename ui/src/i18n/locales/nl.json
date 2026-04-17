@@ -154,10 +154,9 @@
   "table.llmProfile": "Profiel",
   "table.provider": "Provider",
   "table.vectors": "Vectoren",
-  "table.viewError": "Fout bekijken",
   "table.errorDetail": "Fout",
   "overview.metricVectors": "Vectoren",
   "overview.metricProfile": "Profiel",
-  "tooltip.embedded_one": "{{count}} geëmbedd",
-  "tooltip.embedded_other": "{{count}} geëmbedd"
+  "tooltip.embedded_one": "{{count}} verwerkt",
+  "tooltip.embedded_other": "{{count}} verwerkt"
 }

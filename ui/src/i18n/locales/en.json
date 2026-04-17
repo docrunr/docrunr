@@ -154,10 +154,9 @@
   "table.llmProfile": "Profile",
   "table.provider": "Provider",
   "table.vectors": "Vectors",
-  "table.viewError": "View error",
   "table.errorDetail": "Error",
   "overview.metricVectors": "Vectors",
   "overview.metricProfile": "Profile",
-  "tooltip.embedded_one": "{{count}} embedded",
-  "tooltip.embedded_other": "{{count}} embedded"
+  "tooltip.embedded_one": "{{count}} processed",
+  "tooltip.embedded_other": "{{count}} processed"
 }
