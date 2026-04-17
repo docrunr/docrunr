@@ -120,9 +120,7 @@ def _validate_profiles(
     if unknown:
         valid = ", ".join(all_profiles)
         unknown_csv = ", ".join(unknown)
-        raise ValueError(
-            f"Unknown LLM profile(s): {unknown_csv}. Valid profiles: {valid}."
-        )
+        raise ValueError(f"Unknown LLM profile(s): {unknown_csv}. Valid profiles: {valid}.")
 
     unique: list[str] = []
     seen: set[str] = set()

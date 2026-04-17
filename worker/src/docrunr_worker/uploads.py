@@ -183,7 +183,9 @@ def process_upload_request(
         finally:
             tmp_path.unlink(missing_ok=True)
 
-        payload = job_payload_bytes(job_id, display_name, source_path, priority=priority, llm_profile=llm_profile)
+        payload = job_payload_bytes(
+            job_id, display_name, source_path, priority=priority, llm_profile=llm_profile
+        )
         try:
             publish_durable_bytes(
                 settings=settings,

@@ -49,6 +49,8 @@ function QueueJobsTableHeaderCell({ header }: { header: Header<AnyJob, unknown> 
     opacity: sorted ? 1 : 0.45,
   };
 
+  const centered = Boolean(colMeta?.centerContent);
+
   return (
     <Table.Th
       onClick={header.column.getToggleSortingHandler()}
@@ -57,17 +59,20 @@ function QueueJobsTableHeaderCell({ header }: { header: Header<AnyJob, unknown> 
         ...(fixedPx != null ? fixedWidthStyle(fixedPx) : {}),
         ...(maxW != null ? { maxWidth: maxW, minWidth: 0, overflow: 'hidden' } : {}),
         ...(colMeta?.clipOverflow ? { minWidth: 0, overflow: 'hidden' } : {}),
+        ...(centered ? { textAlign: 'center' as const } : {}),
       }}
       aria-label={header.column.id === 'actions' ? 'Actions' : undefined}
       aria-sort={headerAriaSort(sorted, canSort)}
     >
       {header.isPlaceholder ? null : (
-        <Group
-          gap={6}
-          wrap="nowrap"
-          align="center"
-          justify={colMeta?.centerContent ? 'center' : 'flex-start'}
-          style={{ width: '100%' }}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'nowrap',
+            verticalAlign: 'middle',
+          }}
         >
           {flexRender(header.column.columnDef.header, header.getContext())}
           {canSort ? (
@@ -75,7 +80,7 @@ function QueueJobsTableHeaderCell({ header }: { header: Header<AnyJob, unknown> 
               <ColumnSortIcon state={sorted} />
             </span>
           ) : null}
-        </Group>
+        </div>
       )}
     </Table.Th>
   );

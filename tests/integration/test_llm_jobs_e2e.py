@@ -105,14 +105,10 @@ def _print_llm_summary(
         else "profiles: (none)"
     )
     print(f"\n{line}")
-    print(
-        f"LLM integration — {llm_ok}/{len(ok_extractions)} embeddings OK  "
-        f"({profiles_note})"
-    )
+    print(f"LLM integration — {llm_ok}/{len(ok_extractions)} embeddings OK  ({profiles_note})")
     print(line)
     header = (
-        f"{'#':>3}  {'filename':<28}  {'profile':<22}  "
-        f"{'extract':<8}  {'llm':<8}  {'vectors':>7}"
+        f"{'#':>3}  {'filename':<28}  {'profile':<22}  {'extract':<8}  {'llm':<8}  {'vectors':>7}"
     )
     print(header)
     print("-" * len(header))
@@ -162,9 +158,7 @@ def test_extraction_with_llm_produces_embeddings(
             job_profiles[job_id] = random.choice(integration_llm_profiles)
 
         for job_id, rel, sample in staged:
-            body = job_message_bytes(
-                job_id, sample.name, rel, llm_profile=job_profiles[job_id]
-            )
+            body = job_message_bytes(job_id, sample.name, rel, llm_profile=job_profiles[job_id])
             publish_job(ch, body)
 
         # Hop 1: collect extraction results

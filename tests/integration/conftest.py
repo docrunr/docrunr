@@ -115,7 +115,10 @@ def integration_llm_profiles(
 def integration_llm_profile(
     available_integration_llm_profiles: tuple[str, ...],
 ) -> str:
-    """One random profile from the pool (session). Prefer ``integration_llm_profiles`` when selecting per job."""
+    """One random profile from the pool (session).
+
+    Prefer ``integration_llm_profiles`` when selecting per job.
+    """
     try:
         return resolve_llm_profile_from_env(all_profiles=available_integration_llm_profiles)
     except ValueError as exc:

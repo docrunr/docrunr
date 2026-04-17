@@ -5,6 +5,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { FileTypeIcon } from '../../../components/icons/FileTypeIcon';
 import type { AnyJob, LlmJob, WorkerJob, WorkerMode } from '../../../services/workerApi.types';
 import type { ArtifactViewerKind } from './ArtifactViewerModal';
+import { EllipsisTooltipText } from './EllipsisTooltipText';
 import { QueueJobsTableRowActions } from './queueJobsTableRowActions';
 import { formatDurationSeconds } from '../../../utils/duration';
 import { formatFileSize } from '../../../utils/file-size';
@@ -88,23 +89,30 @@ function finishedAtColumnDef(
     cell: ({ row }) => {
       const { status, finished_at, received_at } = row.original;
       const primary = status === 'processing' ? undefined : (finished_at ?? received_at);
+      const display = formatFinishedAt(primary);
+      if (isTightTable) {
+        return (
+          <Text
+            size="sm"
+            w="100%"
+            style={{ whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }}
+          >
+            {display}
+          </Text>
+        );
+      }
       return (
-        <Text
+        <EllipsisTooltipText
+          label={display}
           size="sm"
           w="100%"
-          style={
-            isTightTable
-              ? { whiteSpace: 'normal', wordBreak: 'break-word', minWidth: 0 }
-              : {
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  minWidth: 0,
-                }
-          }
-        >
-          {formatFinishedAt(primary)}
-        </Text>
+          style={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minWidth: 0,
+          }}
+        />
       );
     },
   };
@@ -128,9 +136,12 @@ function sharedFilenameColumnDef(t: TFunction): ColumnDef<AnyJob> {
     accessorKey: 'filename',
     header: t('table.filename'),
     cell: ({ getValue }) => (
-      <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
-        {getValue<string>()}
-      </Text>
+      <EllipsisTooltipText
+        label={getValue<string>() ?? ''}
+        size="sm"
+        lineClamp={1}
+        style={{ minWidth: 0 }}
+      />
     ),
   };
 }
@@ -139,11 +150,15 @@ function sharedDurationColumnDef(t: TFunction): ColumnDef<AnyJob> {
   return {
     accessorKey: 'duration_seconds',
     header: t('table.duration'),
-    meta: { fixedWidthPx: 84, centerContent: true } satisfies QueueJobsTableColumnMeta,
+    meta: { fixedWidthPx: 120, centerContent: true } satisfies QueueJobsTableColumnMeta,
     cell: ({ getValue }) => (
-      <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
-        {formatDurationSeconds(getValue<number>())}
-      </Text>
+      <EllipsisTooltipText
+        label={formatDurationSeconds(getValue<number>())}
+        size="sm"
+        ta="center"
+        w="100%"
+        style={CENTERED_NUMERIC_TEXT_STYLE}
+      />
     ),
   };
 }
@@ -153,9 +168,13 @@ function sharedSourcePathColumnDef(t: TFunction): ColumnDef<AnyJob> {
     accessorKey: 'source_path',
     header: t('table.sourcePath'),
     cell: ({ getValue }) => (
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {getValue<string>()}
-      </Text>
+      <EllipsisTooltipText
+        label={getValue<string>() ?? ''}
+        size="sm"
+        c="dimmed"
+        lineClamp={1}
+        style={{ minWidth: 0 }}
+      />
     ),
   };
 }
@@ -242,30 +261,42 @@ function buildTxtColumns({
       header: t('table.size'),
       meta: { fixedWidthPx: 96, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ row }) => (
-        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
-          {formatFileSize(row.original.size_bytes)}
-        </Text>
+        <EllipsisTooltipText
+          label={formatFileSize(row.original.size_bytes)}
+          size="sm"
+          ta="center"
+          w="100%"
+          style={CENTERED_NUMERIC_TEXT_STYLE}
+        />
       ),
     },
     sharedDurationColumnDef(t) as ColumnDef<WorkerJob>,
     {
       accessorKey: 'chunk_count',
       header: t('table.chunks'),
-      meta: { fixedWidthPx: 64, centerContent: true } satisfies QueueJobsTableColumnMeta,
+      meta: { fixedWidthPx: 120, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
-          {formatNumber(getValue<number>())}
-        </Text>
+        <EllipsisTooltipText
+          label={formatNumber(getValue<number>())}
+          size="sm"
+          ta="center"
+          w="100%"
+          style={CENTERED_NUMERIC_TEXT_STYLE}
+        />
       ),
     },
     {
       accessorKey: 'total_tokens',
       header: t('table.tokens'),
-      meta: { fixedWidthPx: 92, centerContent: true } satisfies QueueJobsTableColumnMeta,
+      meta: { fixedWidthPx: 120, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
-          {formatNumber(getValue<number>())}
-        </Text>
+        <EllipsisTooltipText
+          label={formatNumber(getValue<number>())}
+          size="sm"
+          ta="center"
+          w="100%"
+          style={CENTERED_NUMERIC_TEXT_STYLE}
+        />
       ),
     },
     sharedSourcePathColumnDef(t) as ColumnDef<WorkerJob>,
@@ -290,31 +321,40 @@ function buildLlmColumns({
     {
       accessorKey: 'llm_profile',
       header: t('table.llmProfile'),
-      meta: { fixedWidthPx: 140 } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
-          {getValue<string>()}
-        </Text>
+        <EllipsisTooltipText
+          label={getValue<string>() ?? ''}
+          size="sm"
+          lineClamp={1}
+          style={{ minWidth: 0 }}
+        />
       ),
     },
     {
       accessorKey: 'provider',
       header: t('table.provider'),
-      meta: { fixedWidthPx: 120 } satisfies QueueJobsTableColumnMeta,
+      meta: { fixedWidthPx: 92, clipOverflow: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text size="sm" lineClamp={1} style={{ minWidth: 0 }}>
-          {getValue<string>()}
-        </Text>
+        <EllipsisTooltipText
+          label={getValue<string>() ?? ''}
+          size="sm"
+          lineClamp={1}
+          style={{ minWidth: 0 }}
+        />
       ),
     },
     {
       accessorKey: 'vector_count',
       header: t('table.vectors'),
-      meta: { fixedWidthPx: 72, centerContent: true } satisfies QueueJobsTableColumnMeta,
+      meta: { fixedWidthPx: 120, centerContent: true } satisfies QueueJobsTableColumnMeta,
       cell: ({ getValue }) => (
-        <Text size="sm" ta="center" w="100%" style={CENTERED_NUMERIC_TEXT_STYLE}>
-          {formatNumber(getValue<number>())}
-        </Text>
+        <EllipsisTooltipText
+          label={formatNumber(getValue<number>())}
+          size="sm"
+          ta="center"
+          w="100%"
+          style={CENTERED_NUMERIC_TEXT_STYLE}
+        />
       ),
     },
     sharedDurationColumnDef(t) as ColumnDef<LlmJob>,

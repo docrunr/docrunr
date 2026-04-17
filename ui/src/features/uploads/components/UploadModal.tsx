@@ -148,7 +148,9 @@ export function UploadModal({ opened, onClose }: UploadModalProps) {
               data={selectData}
               value={llmProfile}
               onChange={(v) => setLlmProfile(v ?? '')}
-              disabled={locked || profilesLoading || (!!profilesError && profileOptions.length === 0)}
+              disabled={
+                locked || profilesLoading || (!!profilesError && profileOptions.length === 0)
+              }
               clearable
               allowDeselect
             />

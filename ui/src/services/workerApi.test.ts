@@ -78,9 +78,7 @@ describe('workerApi', () => {
 
     const items = await fetchLlmProfiles();
 
-    expect(items).toEqual([
-      { value: 'nomic-embed-text-137m', label: 'Nomic Embed Text (137M)' },
-    ]);
+    expect(items).toEqual([{ value: 'nomic-embed-text-137m', label: 'Nomic Embed Text (137M)' }]);
     expect(fetchMock).toHaveBeenCalledWith(
       'http://127.0.0.1:8080/llm-api/llm-profiles',
       expect.objectContaining({ credentials: 'include' })
