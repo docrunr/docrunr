@@ -58,7 +58,7 @@ jobs:
         run: pnpm -C ui run typecheck
 
   publish-pypi:
-    if: true
+    if: false
     runs-on: ubuntu-latest
     needs: verify
     permissions:
