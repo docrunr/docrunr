@@ -58,9 +58,7 @@ The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + 
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080** for the TXT extraction dashboard (upload, jobs, artifacts). Open **http://localhost:8081** for the LLM worker dashboard (host port only; inside Docker both workers listen on **8080**, with **8081→8080** published for `worker-llm`). Each worker serves `/health`, `/stats`, and `/api/*` on its host URL.
-
-If the TXT container fails to start with “bind: address already in use” on **8080**, another process on your machine is using that port—stop it or change **`HEALTH_PORT`** in `.env` and the compose port mapping for `worker`.
+Open **http://localhost:8080** for the text extraction (TXT) dashboard (upload, jobs, artifacts). Open **http://localhost:8081** for the LLM dashboard.
 
 **Object storage:** Use the MinIO overlay so both workers use S3-compatible storage (MinIO must be last so it overrides `STORAGE_TYPE`):
 
@@ -68,21 +66,12 @@ If the TXT container fails to start with “bind: address already in use” on *
 docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
 ```
 
-**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which **`ollama pull`s** each configured model before **`exec ollama serve`**. Set **`OLLAMA_EMBED_MODELS`** to a comma-separated list (e.g. `nomic-embed-text,embeddinggemma,bge-m3`). The default pulls all four models configured in `litellm.yaml`.
-
-```bash
-# Dev mode (host Ollama via brew; TXT on 8080, worker-llm on 8081):
-node ./scripts/dev.mjs --llm
-```
+**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which ollama pull's each configured model. Set `OLLAMA_EMBED_MODELS` to a comma-separated list (e.g. `nomic-embed-text,embeddinggemma,bge-m3`). The default pulls all four models configured in `litellm.yaml`.
 
 <details>
 <summary>Queue payloads</summary>
 
-**Extraction**
-
-Job (`docrunr.jobs`): `job_id`, `source_path` required; optional `filename`, `options`, `priority` (0–255), `llm_profile` (LiteLLM `model_name`; when non-empty and extraction succeeds, the worker publishes a follow-up to `docrunr.llm.jobs`). Declare the queue with priority (e.g. `x-max-priority: 255`) and set AMQP `priority` to match.
-
-Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_path` or `error`; echoes `priority` and `llm_profile`.
+**Extraction** — job and result fields, priority queues, and `llm_profile`: [`SPEC.md`](./SPEC.md), section 19.
 
 ```json
 {
@@ -112,11 +101,7 @@ Result (`docrunr.results`): `status` `ok` or `error`; `markdown_path` / `chunks_
 }
 ```
 
-**LLM** (optional `worker-llm`; see [`SPEC.md`](./SPEC.md), section 20)
-
-After a successful extraction with `llm_profile` set, the TXT worker publishes to `docrunr.llm.jobs`. `worker-llm` consumes that queue and publishes outcomes to `docrunr.llm.results` (failures that exhaust retries go to `docrunr.llm.dlq`, same pattern as extraction).
-
-LLM job (`docrunr.llm.jobs`): `job_id`, `extract_job_id`, `filename`, `source_path`, `chunks_path`, `llm_profile` required for normal processing; optional `priority`, `metadata` (object).
+**LLM** (optional `worker-llm`) — queues, job and result fields, and retries: [`SPEC.md`](./SPEC.md), section 20.
 
 ```json
 {
@@ -153,7 +138,7 @@ LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artif
 
 </details>
 
-**Environment variables:** Text extraction and LLM workers are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, *Configuration*, and section 20 for the LLM worker).
+**Environment variables:** Text extraction and LLM workers are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, _Configuration_, and section 20 for the LLM worker).
 
 ### 🛠 **Tech stack**
 
@@ -191,12 +176,12 @@ docrunr/
 
 After the clone and `.env` copy above, the commands below install dependencies and run DocRunr Worker in dev mode. For Docker, tests, lint, release, and other workflows, use the tasks in [`.vscode/tasks.json`](./.vscode/tasks.json).
 
-| Command                  | Description                                        |
-| ------------------------ | -------------------------------------------------- |
-| `uv sync`                | Install the Python workspace and dev dependencies. |
-| `pnpm -C ui install`     | Install UI dependencies.                           |
-| `node ./scripts/dev.mjs` | Start dev                                          |
-| `node ./scripts/dev.mjs --llm` | Start dev with LLM worker + LiteLLM        |
+| Command                        | Description                                        |
+| ------------------------------ | -------------------------------------------------- |
+| `uv sync`                      | Install the Python workspace and dev dependencies. |
+| `pnpm -C ui install`           | Install UI dependencies.                           |
+| `node ./scripts/dev.mjs`       | Start dev                                          |
+| `node ./scripts/dev.mjs --llm` | Start dev with LLM worker + LiteLLM                |
 
 ### ⌨️ **CLI**
 
