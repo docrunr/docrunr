@@ -103,7 +103,7 @@ def fetch_litellm_profiles(
 
 def fetch_litellm_profiles_from_env() -> tuple[str, ...]:
     """Fetch the live LiteLLM model list using integration-test environment defaults."""
-    timeout = float(os.environ.get("LITELLM_TIMEOUT_SECONDS", "120"))
+    timeout = float(os.environ.get("LITELLM_TIMEOUT_SECONDS", "600"))
     return fetch_litellm_profiles(
         resolve_integration_litellm_base_url(),
         api_key=os.environ.get("LITELLM_API_KEY", ""),

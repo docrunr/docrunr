@@ -1,9 +1,8 @@
 <p align="center">
-  <img src="./ui/src/assets/logo-black.svg#gh-light-mode-only" alt="DocRunr" width="80" />
-  <img src="./ui/src/assets/logo-white.svg#gh-dark-mode-only" alt="DocRunr" width="80" />
+  <img src="./ui/src/assets/logo-black.svg#gh-light-mode-only" alt="DocRunr" width="100" />
+  <img src="./ui/src/assets/logo-white.svg#gh-dark-mode-only" alt="DocRunr" width="100" />
 </p>
 
-<h1 align="center">DocRunr</h1>
 <h3 align="center">Document to clean Markdown and chunks. That's it.</h3>
 
 <p align="center">
@@ -31,9 +30,9 @@ DocRunr gives you two ways to run document processing: a CLI for local and batch
 
 DocRunr does one job: it turns messy documents into clean Markdown and structured chunks. PDFs, Office files, email, HTML, images with text.
 
-DocRunr is built for general purpose document handling, not for every possible document edge case. The goal is to make the common 80% of real world documents usable with a predictable pipeline, not to promise perfect conversion for every domain specific layout, template, or special use case. There will always be documents and use cases that need custom handling outside DocRunr.
+DocRunr is built for general document handling, not for every possible document edge case. The goal is to make the common 80% of real world documents usable with a predictable pipeline, not to promise perfect conversion for every domain specific layout, template, or special use case. There will always be documents and use cases that need custom handling outside DocRunr.
 
-Chunks are simple by design. We lean on the structure already in the document and use one chunking approach only: recursive, structure-based splitting with no overlap. Headings come first, paragraphs come next, and sentence boundaries are only used when needed. No strategy matrix, no tuning exercise, no guessing which splitter to use. The behavior is stable, documented in [`SPEC.md`](./SPEC.md), and easy to rely on in production. DocRunr solves this one part of your stack so you can stop thinking about document extraction and chunking and move on to the rest.
+Chunks are simple by design. We lean on the structure already in the document and use one chunking approach only: **recursive, structure based splitting with no overlap**. No strategy matrix, no tuning exercise, no guessing which splitter to use. The behavior is stable, documented in [`SPEC.md`](./SPEC.md), and easy to rely on.
 
 ### 🔄 **How it works**
 
@@ -58,7 +57,8 @@ The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + 
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080** for the text extraction (TXT) dashboard (upload, jobs, artifacts). Open **http://localhost:8081** for the LLM dashboard.
+- Open http://localhost:8080 for the text extraction (TXT) dashboard.
+- Open http://localhost:8081 for the LLM dashboard.
 
 **Object storage:** Use the MinIO overlay so both workers use S3-compatible storage (MinIO must be last so it overrides `STORAGE_TYPE`):
 
@@ -66,7 +66,7 @@ Open **http://localhost:8080** for the text extraction (TXT) dashboard (upload, 
 docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
 ```
 
-**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol. With **docker-compose.ollama.yml**, the Ollama container runs **`scripts/ollama-docker-entrypoint.sh`**, which ollama pull's each configured model. Set `OLLAMA_EMBED_MODELS` to a comma-separated list (e.g. `nomic-embed-text,embeddinggemma,bge-m3`). The default pulls all four models configured in `litellm.yaml`.
+**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
 
 <details>
 <summary>Queue payloads</summary>

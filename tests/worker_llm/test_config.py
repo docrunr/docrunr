@@ -37,7 +37,7 @@ class TestLlmWorkerSettings:
         assert settings.storage_base_path == "/data"
         assert settings.litellm_base_url == "http://litellm:4000"
         assert settings.litellm_api_key == ""
-        assert settings.litellm_timeout_seconds == 120
+        assert settings.litellm_timeout_seconds == 600
         assert settings.job_timeout_seconds == 300
         assert settings.worker_concurrency == 1
         assert settings.health_port == 8080

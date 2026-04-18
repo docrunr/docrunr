@@ -43,7 +43,7 @@ class LlmWorkerSettings(BaseSettings):
     # LiteLLM (Compose: http://litellm:4000; host dev: LITELLM_BASE_URL + RABBITMQ_HOST=localhost)
     litellm_base_url: str = "http://litellm:4000"
     litellm_api_key: str = ""
-    litellm_timeout_seconds: int = 120
+    litellm_timeout_seconds: int = 600
 
     # Worker behaviour
     job_timeout_seconds: int = 300

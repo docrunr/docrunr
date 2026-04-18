@@ -615,7 +615,7 @@ Published by `worker-llm` to `docrunr.llm.results`:
 | --------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LITELLM_BASE_URL`          | `http://litellm:4000` | LiteLLM proxy base URL (`localhost` / `127.0.0.1` is rewritten to `litellm` when `RABBITMQ_HOST` is `rabbitmq`, so a host `.env` does not break Docker) |
 | `LITELLM_API_KEY`           | *(empty)*             | API key for LiteLLM                                                                                                                                     |
-| `LITELLM_TIMEOUT_SECONDS`   | `120`                 | Timeout per LiteLLM call                                                                                                                                |
+| `LITELLM_TIMEOUT_SECONDS`   | `600`                 | Timeout per LiteLLM call (10 minutes)                                                                                                                   |
 | `RABBITMQ_LLM_QUEUE`        | `docrunr.llm.jobs`    | Consume queue                                                                                                                                           |
 | `RABBITMQ_LLM_RESULT_QUEUE` | `docrunr.llm.results` | Result queue                                                                                                                                            |
 | `RABBITMQ_LLM_DLQ_QUEUE`    | `docrunr.llm.dlq`     | Dead-letter queue                                                                                                                                       |

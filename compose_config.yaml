@@ -164,7 +164,7 @@ services:
       JOB_TIMEOUT_SECONDS: "120"
       LITELLM_API_KEY: ""
       LITELLM_BASE_URL: http://litellm:4000
-      LITELLM_TIMEOUT_SECONDS: "120"
+      LITELLM_TIMEOUT_SECONDS: "600"
       MINIO_ACCESS_KEY: docrunr
       MINIO_BUCKET: docrunr
       MINIO_ENDPOINT: minio:9000
