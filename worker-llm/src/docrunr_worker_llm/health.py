@@ -8,6 +8,7 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import secrets
 import threading
 import time
@@ -16,11 +17,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path, PurePosixPath
-import re
 from typing import TYPE_CHECKING, Any, cast
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
 
 from docrunr_worker_llm.config import LlmWorkerSettings
 from docrunr_worker_llm.job_status import ERROR, OK, PROCESSING, replay_stats_transition

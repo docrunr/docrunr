@@ -329,17 +329,13 @@ class Consumer:
             return
         if not delivery.channel.is_open:
             self._pop_pending_delivery(future)
-            logger.warning(
-                "Dropping completed LLM result because the delivery channel is closed"
-            )
+            logger.warning("Dropping completed LLM result because the delivery channel is closed")
             return
 
         connection = self._connection
         if connection is None or not connection.is_open:
             self._pop_pending_delivery(future)
-            logger.warning(
-                "Dropping completed LLM result because broker connection is closed"
-            )
+            logger.warning("Dropping completed LLM result because broker connection is closed")
             return
 
         try:

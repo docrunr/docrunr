@@ -10,12 +10,29 @@ const STEPS = [
   {
     name: 'ruff check',
     command: 'uv',
-    args: ['run', 'ruff', 'check', '--fix', 'core/src/', 'worker/src/', 'tests/'],
+    args: [
+      'run',
+      'ruff',
+      'check',
+      '--fix',
+      'core/src/',
+      'worker/src/',
+      'worker-llm/src/',
+      'tests/',
+    ],
   },
   {
     name: 'ruff format',
     command: 'uv',
-    args: ['run', 'ruff', 'format', 'core/src/', 'worker/src/', 'tests/'],
+    args: [
+      'run',
+      'ruff',
+      'format',
+      'core/src/',
+      'worker/src/',
+      'worker-llm/src/',
+      'tests/',
+    ],
   },
   {
     name: 'mypy core',
