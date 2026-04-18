@@ -61,6 +61,35 @@ class TestDeterminism:
         )
         assert first == second
 
+    def test_chunk_id_depends_on_text_not_index(self) -> None:
+        shared = (
+            "Shared chunk marker. " * 30
+            + "This paragraph should remain a stable chunk when its position changes."
+        )
+        first = chunk_markdown(
+            "# Shared\n\n" + shared,
+            config=ChunkingConfig(
+                chunk_size_tokens=120,
+                chunk_overlap_tokens=0,
+                max_chunk_tokens=160,
+            ),
+            source_doc_id=derive_source_doc_id("shared.md"),
+        )
+        second = chunk_markdown(
+            "# Prefix\n\nPrefix paragraph.\n\n# Shared\n\n" + shared,
+            config=ChunkingConfig(
+                chunk_size_tokens=120,
+                chunk_overlap_tokens=0,
+                max_chunk_tokens=160,
+            ),
+            source_doc_id=derive_source_doc_id("shared.md"),
+        )
+
+        first_chunk = next(chunk for chunk in first if "Shared chunk marker." in chunk.text)
+        second_chunk = next(chunk for chunk in second if "Shared chunk marker." in chunk.text)
+        assert first_chunk.text == second_chunk.text
+        assert first_chunk.chunk_id == second_chunk.chunk_id
+
 
 class TestContentSafety:
     def test_no_empty_or_whitespace_chunks(self) -> None:
@@ -140,6 +169,40 @@ class TestMetadata:
             assert chunk.source_doc_id == source_id
             assert chunk.char_count == len(chunk.text)
             assert chunk.splitter_version == "recursive_v1_token300_overlap0"
+
+    def test_offsets_are_monotonic_and_exact(self) -> None:
+        md = (
+            "# Intro\n\n"
+            "Paragraph alpha with enough content to force chunking. "
+            * 12
+            + "\n\n## Details\n\n"
+            + "Paragraph beta with more content and stable offsets. " * 12
+        )
+        chunks = chunk_markdown(
+            md,
+            config=ChunkingConfig(
+                chunk_size_tokens=80,
+                chunk_overlap_tokens=0,
+                max_chunk_tokens=120,
+            ),
+            source_doc_id=derive_source_doc_id("offset-coverage.md"),
+        )
+
+        assert len(chunks) > 1
+
+        previous_end = 0
+        for chunk in chunks:
+            assert 0 <= chunk.start_offset < chunk.end_offset <= len(md)
+            assert chunk.start_offset >= previous_end
+            assert md[chunk.start_offset : chunk.end_offset] == chunk.text
+            assert chunk.to_dict()["start_offset"] == chunk.start_offset
+            assert chunk.to_dict()["end_offset"] == chunk.end_offset
+            gap = md[previous_end : chunk.start_offset]
+            assert gap.isspace() or gap == ""
+            previous_end = chunk.end_offset
+
+        trailing_gap = md[previous_end:]
+        assert trailing_gap.isspace() or trailing_gap == ""
 
 
 class TestEdgeCases:

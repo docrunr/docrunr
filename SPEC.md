@@ -144,6 +144,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 0,
       "text": "# Introduction\n\nDocRunr emits predictable chunks.",
+      "start_offset": 0,
+      "end_offset": 50,
       "section_path": ["Introduction"],
       "token_count": 14,
       "char_count": 50
@@ -151,6 +153,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 1,
       "text": "## Methods\n\nChunking follows heading boundaries.",
+      "start_offset": 52,
+      "end_offset": 98,
       "section_path": ["Introduction", "Methods"],
       "token_count": 13,
       "char_count": 46
@@ -158,6 +162,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 2,
       "text": "## Conclusion\n\nOutput stays stable across runs.",
+      "start_offset": 100,
+      "end_offset": 145,
       "section_path": ["Introduction", "Conclusion"],
       "token_count": 15,
       "char_count": 45
@@ -172,6 +178,8 @@ Chunk object contract:
 
 - `chunk_index`: zero-based, stable order in output
 - `text`: chunk payload from cleaned Markdown
+- `start_offset`: inclusive character offset of `text` within top-level `content`
+- `end_offset`: exclusive character offset of `text` within top-level `content`
 - `section_path`: ordered heading ancestry from top-level to deepest/current heading
 - `token_count`: token count for `text`
 - `char_count`: character count for `text`
@@ -181,6 +189,12 @@ Chunk object contract:
 - Always present on every chunk.
 - Chunks before the first heading use `[]`.
 - The last element is the chunk's most specific local section.
+
+Offset notes:
+
+- Offsets are measured against the cleaned Markdown in the top-level `content` field.
+- `content[start_offset:end_offset] == text` for each chunk.
+- Offsets are deterministic across repeated runs for identical cleaned input.
 
 ### Batch Report
 

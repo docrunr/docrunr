@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from .base import BaseParser
@@ -43,7 +42,6 @@ class BeautifulSoupHtmlParser(BaseParser):
                 parts.append(text)
 
         result = "\n\n".join(parts)
-        result = re.sub(r"\n{3,}", "\n\n", result)
 
         if not result.strip():
             raise ValueError("BeautifulSoup extracted no content")

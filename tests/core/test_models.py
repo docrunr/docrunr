@@ -18,12 +18,16 @@ class TestChunk:
             token_count=1,
             char_count=5,
             splitter_version="recursive_v1_token300_overlap0",
+            start_offset=3,
+            end_offset=8,
             section_path=["Intro"],
         )
         d = c.to_dict()
         assert d == {
             "chunk_index": 0,
             "text": "hello",
+            "start_offset": 3,
+            "end_offset": 8,
             "section_path": ["Intro"],
             "token_count": 1,
             "char_count": 5,
@@ -142,6 +146,8 @@ class TestResult:
         assert data["content"] == "# Hello\n"
         assert len(data["chunks"]) == 1
         assert "chunk_id" not in data["chunks"][0]
+        assert data["chunks"][0]["start_offset"] == 0
+        assert data["chunks"][0]["end_offset"] == 7
         assert data["chunks"][0]["section_path"] == []
 
 

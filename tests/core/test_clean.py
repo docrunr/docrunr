@@ -122,3 +122,39 @@ class TestCleanMarkdown:
         assert "| Item | Value |" in result
         assert "| latency | 12 |" in result
         assert "latency — page 12" not in result
+
+    def test_strip_repeated_headers_and_footers_across_pages(self) -> None:
+        text = (
+            "ACME Quarterly Report\nPage 1\n\nAlpha body.\n\nConfidential\n\f"
+            "ACME Quarterly Report\nPage 2\n\nBeta body.\n\nConfidential\n\f"
+            "ACME Quarterly Report\nPage 3\n\nGamma body.\n\nConfidential\n"
+        )
+        result = clean_markdown(text)
+        assert "ACME Quarterly Report" not in result
+        assert "Confidential" not in result
+        assert "Page 1" not in result
+        assert "Page 2" not in result
+        assert "Page 3" not in result
+        assert "Alpha body." in result
+        assert "Beta body." in result
+        assert "Gamma body." in result
+
+    def test_dehyphenate_line_and_page_continuations(self) -> None:
+        text = (
+            "This para-\ngraph should dehyphenate.\n\fAnd this trans-\nport example should too.\n"
+        )
+        result = clean_markdown(text)
+        assert "paragraph should dehyphenate." in result
+        assert "transport example should too." in result
+
+    def test_preserve_explicit_hyphenated_compounds(self) -> None:
+        text = "A state-of-the-art system should stay hyphenated.\n"
+        result = clean_markdown(text)
+        assert "state-of-the-art" in result
+
+    def test_repair_list_continuation_after_page_break(self) -> None:
+        text = "- First item\n\fcontinued detail from next page\n- Second item\n"
+        result = clean_markdown(text)
+        assert "- First item" in result
+        assert "  continued detail from next page" in result
+        assert "- Second item" in result
