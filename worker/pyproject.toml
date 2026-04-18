@@ -1,6 +1,6 @@
 [project]
 name = "docrunr-worker"
-version = "0.0.0"
+version = "0.1.0"
 description = "RabbitMQ worker for DocRunr document processing."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11,<3.14"
