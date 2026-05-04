@@ -1,4 +1,4 @@
-# LLM worker + LiteLLM overlay. Combine with base (+ local and/or minio as needed).
+# LLM worker + LiteLLM overlay. Combine with base (+ local and/or s3 overlays as needed).
 # `worker-llm` listens on **8080 inside the container** (same as TXT). Only the host publish
 # port differs: `LLM_HEALTH_PORT` (default 8081) → container 8080.
 #
@@ -50,11 +50,11 @@ services:
       RABBITMQ_LLM_DLQ_QUEUE: ${RABBITMQ_LLM_DLQ_QUEUE:-docrunr.llm.dlq}
       STORAGE_TYPE: ${STORAGE_TYPE:-local}
       STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/data}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_SECURE: ${MINIO_SECURE}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-docrunr}
+      S3_REGION: ${S3_REGION:-us-east-1}
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_API_KEY: ${LITELLM_API_KEY:-}
       LITELLM_TIMEOUT_SECONDS: ${LITELLM_TIMEOUT_SECONDS:-600}

@@ -60,10 +60,10 @@ docker compose up -d --build
 - Open http://localhost:8080 for the text extraction (TXT) dashboard.
 - Open http://localhost:8081 for the LLM dashboard.
 
-**Object storage:** Use the MinIO overlay so both workers use S3-compatible storage (MinIO must be last so it overrides `STORAGE_TYPE`):
+**Object storage:** Use the SeaweedFS overlay so both workers use S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
 
 ```bash
-docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
+docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
 ```
 
 **LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
@@ -145,7 +145,7 @@ LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artif
 - **Core runtime:** Python
 - **Queue:** RabbitMQ
 - **UI:** React, Vite, Mantine
-- **Storage:** local disk or MinIO
+- **Storage:** local disk or S3-compatible object storage
 - **Packaging:** Docker
 
 ### 💻 **Development**

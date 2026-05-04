@@ -1,4 +1,4 @@
-"""Storage abstraction — local filesystem or MinIO."""
+"""Storage abstraction — local filesystem or S3-compatible object storage."""
 
 from __future__ import annotations
 
@@ -84,30 +84,48 @@ class LocalStorage:
             return False
 
 
-class MinioStorage:
-    """S3-compatible storage via MinIO SDK."""
+class S3Storage:
+    """S3-compatible storage via boto3 (SeaweedFS, AWS S3, R2, MinIO, ...)."""
 
     def __init__(self, settings: WorkerSettings) -> None:
         try:
-            from minio import Minio
+            import boto3
+            from botocore.config import Config as BotoConfig
+            from botocore.exceptions import ClientError
         except ImportError as exc:
             raise ImportError(
-                "The minio package is required for MinIO storage (pip install minio>=7)"
+                "The boto3 package is required for S3 storage (pip install boto3>=1.35)"
             ) from exc
 
-        self._client = Minio(
-            settings.minio_endpoint,
-            access_key=settings.minio_access_key,
-            secret_key=settings.minio_secret_key,
-            secure=settings.minio_secure,
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=settings.s3_endpoint,
+            aws_access_key_id=settings.s3_access_key,
+            aws_secret_access_key=settings.s3_secret_key,
+            region_name=settings.s3_region,
+            config=BotoConfig(s3={"addressing_style": "path"}),
         )
-        self._bucket = settings.minio_bucket
+        self._client_error = ClientError
+        self._bucket = settings.s3_bucket
+        self._region = settings.s3_region
         self._ensure_bucket()
 
     def _ensure_bucket(self) -> None:
-        if not self._client.bucket_exists(self._bucket):
-            self._client.make_bucket(self._bucket)
-            logger.info("Created MinIO bucket: %s", self._bucket)
+        try:
+            self._client.head_bucket(Bucket=self._bucket)
+            return
+        except self._client_error as exc:
+            code = exc.response.get("Error", {}).get("Code", "")
+            if code not in {"404", "NoSuchBucket", "NotFound"}:
+                raise
+
+        create_kwargs: dict[str, object] = {"Bucket": self._bucket}
+        if self._region != "us-east-1":
+            create_kwargs["CreateBucketConfiguration"] = {
+                "LocationConstraint": self._region
+            }
+        self._client.create_bucket(**create_kwargs)
+        logger.info("Created S3 bucket: %s", self._bucket)
 
     def read(self, path: str) -> Path:
         import tempfile
@@ -117,34 +135,34 @@ class MinioStorage:
         os.close(fd)
         tmp = Path(tmp_name)
         try:
-            self._client.fget_object(self._bucket, path, str(tmp))
+            self._client.download_file(self._bucket, path, str(tmp))
         except Exception:
             tmp.unlink(missing_ok=True)
             raise
         return tmp
 
     def write(self, local_path: Path, dest_path: str) -> None:
-        self._client.fput_object(self._bucket, dest_path, str(local_path))
+        self._client.upload_file(str(local_path), self._bucket, dest_path)
         logger.debug("Uploaded %s -> %s/%s", local_path, self._bucket, dest_path)
 
     def delete(self, path: str) -> None:
         try:
-            self._client.remove_object(self._bucket, path)
+            self._client.delete_object(Bucket=self._bucket, Key=path)
         except Exception:
-            logger.warning("MinIO delete failed for %s", path, exc_info=True)
+            logger.warning("S3 delete failed for %s", path, exc_info=True)
 
     def cleanup(self, local_path: Path) -> None:
         local_path.unlink(missing_ok=True)
 
     def exists(self, path: str) -> bool:
         try:
-            self._client.stat_object(self._bucket, path)
+            self._client.head_object(Bucket=self._bucket, Key=path)
             return True
-        except Exception:
+        except self._client_error:
             return False
 
 
 def create_storage(settings: WorkerSettings) -> StorageBackend:
-    if settings.storage_type == StorageType.MINIO:
-        return MinioStorage(settings)
+    if settings.storage_type == StorageType.S3:
+        return S3Storage(settings)
     return LocalStorage(settings.storage_base_path)

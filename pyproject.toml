@@ -58,9 +58,10 @@ module = [
     "kreuzberg.*",
     "pypdfium2.*",
     "bs4.*",
+    "boto3.*",
+    "botocore.*",
     "pika.*",
     "pydantic_settings.*",
-    "minio.*",
     "litellm.*",
     "typer.*",
     "rich.*",
@@ -71,7 +72,7 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 markers = [
     "integration: requires RabbitMQ, worker, or other real services (opt-in)",
-    "llm_jobs: extraction jobs use llm_profile and worker-llm (excluded from test:integration:txt; included in minio full run)",
+    "llm_jobs: extraction jobs use llm_profile and worker-llm (excluded from test:integration:txt; included in s3 full run)",
 ]
 
 # Skylos TS analysis does not treat React error-boundary hooks as lifecycle methods

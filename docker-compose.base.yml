@@ -1,6 +1,6 @@
 # Shared worker + RabbitMQ stack. Combine with overlays (see repo `docker-compose.yml`).
 #   Local disk: docker-compose.local.yml
-#   MinIO:      docker-compose.minio.yml
+#   S3 storage: docker-compose.seaweedfs.yml
 #   LLM:        docker-compose.llm.yml (+ docker-compose.ollama.yml for in-Docker Ollama)
 
 services:
@@ -32,11 +32,11 @@ services:
       RABBITMQ_LLM_QUEUE: ${RABBITMQ_LLM_QUEUE:-docrunr.llm.jobs}
       STORAGE_TYPE: ${STORAGE_TYPE}
       STORAGE_BASE_PATH: ${STORAGE_BASE_PATH}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_SECURE: ${MINIO_SECURE}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-docrunr}
+      S3_REGION: ${S3_REGION:-us-east-1}
       JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
       HEALTH_PORT: ${HEALTH_PORT}

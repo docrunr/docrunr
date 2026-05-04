@@ -5,15 +5,15 @@ Prerequisites (pick one stack)::
     docker compose up -d --build
     docker compose -f docker-compose.base.yml -f docker-compose.local.yml up -d --build
     docker compose -f docker-compose.base.yml -f docker-compose.llm.yml \\
-        -f docker-compose.ollama.yml -f docker-compose.minio.yml up -d --build
+        -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
 
 Tests run on the host: RabbitMQ on ``127.0.0.1:5672``, worker health on ``8080``.
-Storage assertions use ``DOCRUNR_INTEGRATION_STORAGE`` (``local`` or ``minio``) so they
+Storage assertions use ``DOCRUNR_INTEGRATION_STORAGE`` (``local`` or ``s3``) so they
 match the running compose overlay.
 
 Override with ``RABBITMQ_HOST``, ``DOCRUNR_HEALTH_URL`` if needed.
-For MinIO mode, set ``DOCRUNR_INTEGRATION_MINIO_ENDPOINT`` (default ``127.0.0.1:9000``)
-and the same ``MINIO_*`` credentials as in ``.env``.
+For S3 mode, set ``DOCRUNR_INTEGRATION_S3_ENDPOINT`` (default ``http://127.0.0.1:8333``)
+and the same ``S3_*`` credentials as in ``.env``.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def _require_services() -> None:
     if not try_connect_rabbitmq():
         pytest.skip(
             "RabbitMQ not reachable at RABBITMQ_HOST / RABBITMQ_PORT "
-            "(start with: docker compose up -d, or base+local / base+minio overlays)"
+            "(start with: docker compose up -d, or base+local / base+seaweedfs overlays)"
         )
     if not try_worker_health():
         pytest.skip(

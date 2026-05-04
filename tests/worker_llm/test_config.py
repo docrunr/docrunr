@@ -15,7 +15,7 @@ class TestLlmWorkerSettings:
         clean = {
             k: v
             for k, v in os.environ.items()
-            if not k.upper().startswith(("RABBITMQ_", "STORAGE_", "MINIO_", "LITELLM_"))
+            if not k.upper().startswith(("RABBITMQ_", "STORAGE_", "S3_", "LITELLM_"))
             and k.upper()
             not in (
                 "JOB_TIMEOUT_SECONDS",
@@ -49,7 +49,7 @@ class TestLlmWorkerSettings:
         env = {
             "RABBITMQ_HOST": "my-rabbit",
             "RABBITMQ_PORT": "5673",
-            "STORAGE_TYPE": "minio",
+            "STORAGE_TYPE": "s3",
             "LITELLM_BASE_URL": "http://litellm:4000",
             "LITELLM_API_KEY": "sk-test-123",
             "HEALTH_PORT": "9090",
@@ -58,7 +58,7 @@ class TestLlmWorkerSettings:
             settings = LlmWorkerSettings()
             assert settings.rabbitmq_host == "my-rabbit"
             assert settings.rabbitmq_port == 5673
-            assert settings.storage_type == StorageType.MINIO
+            assert settings.storage_type == StorageType.S3
             assert settings.litellm_base_url == "http://litellm:4000"
             assert settings.litellm_api_key == "sk-test-123"
             assert settings.health_port == 9090
@@ -83,7 +83,7 @@ class TestLlmWorkerSettings:
 
     def test_storage_type_enum(self) -> None:
         assert StorageType.LOCAL.value == "local"
-        assert StorageType.MINIO.value == "minio"
+        assert StorageType.S3.value == "s3"
 
     @pytest.mark.parametrize("value", [0, 33])
     def test_worker_concurrency_bounds(self, value: int) -> None:
