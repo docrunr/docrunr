@@ -121,9 +121,7 @@ class S3Storage:
 
         create_kwargs: dict[str, object] = {"Bucket": self._bucket}
         if self._region != "us-east-1":
-            create_kwargs["CreateBucketConfiguration"] = {
-                "LocationConstraint": self._region
-            }
+            create_kwargs["CreateBucketConfiguration"] = {"LocationConstraint": self._region}
         self._client.create_bucket(**create_kwargs)
         logger.info("Created S3 bucket: %s", self._bucket)
 
