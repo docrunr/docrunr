@@ -12,7 +12,7 @@ from pydantic_settings import BaseSettings
 
 class StorageType(StrEnum):
     LOCAL = "local"
-    MINIO = "minio"
+    S3 = "s3"
 
 
 class LlmWorkerSettings(BaseSettings):
@@ -33,12 +33,12 @@ class LlmWorkerSettings(BaseSettings):
     storage_type: StorageType = StorageType.LOCAL
     storage_base_path: str = "/data"
 
-    # MinIO (only when storage_type=minio)
-    minio_endpoint: str = "minio:9000"
-    minio_access_key: str = ""
-    minio_secret_key: str = ""
-    minio_bucket: str = "docrunr"
-    minio_secure: bool = False
+    # S3-compatible storage (only when storage_type=s3)
+    s3_endpoint: str = "http://seaweedfs:8333"
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_bucket: str = "docrunr"
+    s3_region: str = "us-east-1"
 
     # LiteLLM (Compose: http://litellm:4000; host dev: LITELLM_BASE_URL + RABBITMQ_HOST=localhost)
     litellm_base_url: str = "http://litellm:4000"

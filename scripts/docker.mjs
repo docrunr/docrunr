@@ -3,7 +3,7 @@
  * Docker compose / image builds for DocRunr. Invoked from VS Code tasks or CLI.
  *
  * Usage:
- *   node ./scripts/docker.mjs run [local|minio]
+ *   node ./scripts/docker.mjs run [local|s3]
  *   node ./scripts/docker.mjs build [all|txt|llm]
  */
 
@@ -15,9 +15,9 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
 
-/** @param {'local' | 'minio'} profile */
+/** @param {'local' | 's3'} profile */
 function composeFileArgs(profile) {
-  if (profile === 'minio') {
+  if (profile === 's3') {
     return [
       '-f',
       'docker-compose.base.yml',
@@ -26,7 +26,7 @@ function composeFileArgs(profile) {
       '-f',
       'docker-compose.ollama.yml',
       '-f',
-      'docker-compose.minio.yml',
+      'docker-compose.seaweedfs.yml',
     ];
   }
   return [
@@ -91,7 +91,7 @@ function runBuild(target) {
 
 function printHelp() {
   console.log(`Usage:
-  node ./scripts/docker.mjs run [local|minio]   default: local
+  node ./scripts/docker.mjs run [local|s3]   default: local
   node ./scripts/docker.mjs build [all|txt|llm]   default: all
 `);
 }
@@ -110,9 +110,9 @@ function main() {
   }
 
   if (command === 'run') {
-    const profile = arg === 'minio' ? 'minio' : 'local';
-    if (arg && arg !== 'local' && arg !== 'minio') {
-      console.error(`Unknown profile: ${arg} (use local or minio)`);
+    const profile = arg === 's3' ? 's3' : 'local';
+    if (arg && arg !== 'local' && arg !== 's3') {
+      console.error(`Unknown profile: ${arg} (use local or s3)`);
       process.exit(1);
     }
     runCompose(profile);

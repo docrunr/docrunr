@@ -12,6 +12,7 @@ from statistics import fmean
 
 import tiktoken
 
+from ._text import normalize_for_comparison
 from .models import Chunk
 
 log = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def count_tokens(text: str) -> int:
 
 def derive_source_doc_id(source: str) -> str:
     """Derive a stable source document id from processing context."""
-    normalized = _normalize_for_hash(source)
+    normalized = normalize_for_comparison(source)
     digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
     return f"doc_{digest[:16]}"
 
@@ -149,80 +150,26 @@ def chunk_markdown(
     duplicate_count = 0
 
     for span in packed_spans:
-        text, start_offset, end_offset = _normalize_text_with_offsets(
+        normalized_span = _normalize_span(source=markdown, span=span)
+        if normalized_span is None:
+            continue
+
+        final_spans = _enforce_max_tokens(
+            span=normalized_span,
             source=markdown,
-            start=span.start,
-            end=span.end,
+            config=active,
         )
-
-        if not text or text.isspace():
-            continue
-
-        token_count = count_tokens(text)
-        if token_count <= 0:
-            continue
-
-        # Guard: recursively split again if hard cap exceeded after normalization.
-        if token_count > active.max_chunk_tokens:
-            enforced = _split_recursive(
-                _Span(text=text, start=start_offset, end=end_offset),
-                separators=active.separators,
-                target_tokens=active.chunk_size_tokens,
-                max_chunk_tokens=active.max_chunk_tokens,
+        for final_span in final_spans:
+            dup = _append_chunk(
+                chunks=chunks,
+                seen_texts=seen_texts,
+                source_doc_id=src_id,
+                split_ver=split_ver,
+                span=final_span,
+                section_path=section_path_resolver.path_for(final_span.start),
             )
-            repacked = _pack_spans(
-                enforced,
-                target_tokens=active.chunk_size_tokens,
-                max_chunk_tokens=active.max_chunk_tokens,
-            )
-            for sub in repacked:
-                stxt, sstart, send = _normalize_text_with_offsets(
-                    source=markdown,
-                    start=sub.start,
-                    end=sub.end,
-                )
-                if not stxt or stxt.isspace():
-                    continue
-                sub_tokens = count_tokens(stxt)
-                if sub_tokens <= 0:
-                    continue
-                if sub_tokens > active.max_chunk_tokens:
-                    final = _split_force_token_windows(
-                        _Span(text=stxt, start=sstart, end=send),
-                        target_tokens=active.chunk_size_tokens,
-                    )
-                    for forced in final:
-                        _append_chunk(
-                            chunks=chunks,
-                            seen_texts=seen_texts,
-                            source_doc_id=src_id,
-                            split_ver=split_ver,
-                            span=forced,
-                            section_path=section_path_resolver.path_for(forced.start),
-                        )
-                    continue
-                dup = _append_chunk(
-                    chunks=chunks,
-                    seen_texts=seen_texts,
-                    source_doc_id=src_id,
-                    split_ver=split_ver,
-                    span=_Span(text=stxt, start=sstart, end=send),
-                    section_path=section_path_resolver.path_for(sstart),
-                )
-                if dup:
-                    duplicate_count += 1
-            continue
-
-        dup = _append_chunk(
-            chunks=chunks,
-            seen_texts=seen_texts,
-            source_doc_id=src_id,
-            split_ver=split_ver,
-            span=_Span(text=text, start=start_offset, end=end_offset),
-            section_path=section_path_resolver.path_for(start_offset),
-        )
-        if dup:
-            duplicate_count += 1
+            if dup:
+                duplicate_count += 1
 
     _log_distribution(src_id, chunks, duplicate_count=duplicate_count)
     return chunks
@@ -258,7 +205,7 @@ def _append_chunk(
     token_count = count_tokens(text)
     char_count = len(text)
     chunk_index = len(chunks)
-    chunk_hash_input = f"{source_doc_id}|{chunk_index}|{_normalize_for_hash(text)}"
+    chunk_hash_input = f"{source_doc_id}|{normalize_for_comparison(text)}"
     chunk_id = hashlib.sha256(chunk_hash_input.encode("utf-8")).hexdigest()
 
     chunks.append(
@@ -270,6 +217,8 @@ def _append_chunk(
             token_count=token_count,
             char_count=char_count,
             splitter_version=split_ver,
+            start_offset=span.start,
+            end_offset=span.end,
             section_path=list(section_path),
         )
     )
@@ -534,6 +483,53 @@ def _pack_spans(
     return out
 
 
+def _normalize_span(*, source: str, span: _Span) -> _Span | None:
+    text, start_offset, end_offset = _normalize_text_with_offsets(
+        source=source,
+        start=span.start,
+        end=span.end,
+    )
+    if not text or text.isspace():
+        return None
+    if count_tokens(text) <= 0:
+        return None
+    return _Span(text=text, start=start_offset, end=end_offset)
+
+
+def _enforce_max_tokens(*, span: _Span, source: str, config: ChunkingConfig) -> list[_Span]:
+    if count_tokens(span.text) <= config.max_chunk_tokens:
+        return [span]
+
+    enforced = _split_recursive(
+        span,
+        separators=config.separators,
+        target_tokens=config.chunk_size_tokens,
+        max_chunk_tokens=config.max_chunk_tokens,
+    )
+    repacked = _pack_spans(
+        enforced,
+        target_tokens=config.chunk_size_tokens,
+        max_chunk_tokens=config.max_chunk_tokens,
+    )
+
+    final_spans: list[_Span] = []
+    for candidate in repacked:
+        normalized = _normalize_span(source=source, span=candidate)
+        if normalized is None:
+            continue
+        if count_tokens(normalized.text) > config.max_chunk_tokens:
+            final_spans.extend(
+                _split_force_token_windows(
+                    normalized,
+                    target_tokens=config.chunk_size_tokens,
+                )
+            )
+            continue
+        final_spans.append(normalized)
+
+    return final_spans
+
+
 def _normalize_text_with_offsets(*, source: str, start: int, end: int) -> tuple[str, int, int]:
     raw = source[start:end]
     if not raw:
@@ -555,10 +551,6 @@ def _normalize_text_with_offsets(*, source: str, start: int, end: int) -> tuple[
 def _normalize_chunk_text(text: str) -> str:
     # Keep chunk payload semantically identical to cleaned markdown.
     return text.replace("\r\n", "\n").replace("\r", "\n")
-
-
-def _normalize_for_hash(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
 
 
 def _percentile(values: list[int], p: float) -> int:

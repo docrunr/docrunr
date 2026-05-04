@@ -9,7 +9,7 @@ keywords = ["docrunr", "worker", "llm", "embeddings", "litellm", "rabbitmq"]
 
 dependencies = [
     "litellm>=1.40",
-    "minio>=7.0",
+    "boto3>=1.35",
     "pika>=1.3",
     "psutil>=6.0",
     "pydantic-settings>=2.0",

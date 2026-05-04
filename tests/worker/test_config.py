@@ -33,7 +33,7 @@ class TestWorkerSettings:
         env = {
             "RABBITMQ_HOST": "my-rabbit",
             "RABBITMQ_PORT": "5673",
-            "STORAGE_TYPE": "minio",
+            "STORAGE_TYPE": "s3",
             "WORKER_CONCURRENCY": "4",
             "HEALTH_PORT": "9090",
             "SQLITE_BASE_PATH": "/tmp/jobs-db",
@@ -43,14 +43,14 @@ class TestWorkerSettings:
             assert settings.rabbitmq_host == "my-rabbit"
             assert settings.rabbitmq_port == 5673
             assert settings.consumed_queues == ("docrunr.jobs",)
-            assert settings.storage_type == StorageType.MINIO
+            assert settings.storage_type == StorageType.S3
             assert settings.worker_concurrency == 4
             assert settings.health_port == 9090
             assert settings.sqlite_base_path == "/tmp/jobs-db"
 
     def test_storage_type_enum(self) -> None:
         assert StorageType.LOCAL.value == "local"
-        assert StorageType.MINIO.value == "minio"
+        assert StorageType.S3.value == "s3"
 
     @pytest.mark.parametrize("value", [0, 33])
     def test_worker_concurrency_bounds(self, value: int) -> None:

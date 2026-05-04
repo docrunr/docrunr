@@ -28,7 +28,13 @@ class Chunk:
     token_count: int
     char_count: int
     splitter_version: str
+    start_offset: int = 0
+    end_offset: int = 0
     section_path: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.end_offset == 0 and self.char_count > 0:
+            object.__setattr__(self, "end_offset", self.start_offset + self.char_count)
 
     @property
     def index(self) -> int:
@@ -44,6 +50,8 @@ class Chunk:
         return {
             "chunk_index": self.chunk_index,
             "text": self.text,
+            "start_offset": self.start_offset,
+            "end_offset": self.end_offset,
             "section_path": list(self.section_path),
             "token_count": self.token_count,
             "char_count": self.char_count,

@@ -53,7 +53,7 @@ def _results_timeout_seconds(job_count: int) -> float:
 def _require_services() -> None:
     if not try_connect_rabbitmq():
         pytest.skip(
-            "RabbitMQ not reachable (start with: docker compose up -d, or base+local / base+minio)"
+            "RabbitMQ not reachable (start with: docker compose up -d, or base+local / base+seaweedfs)"
         )
     if not try_worker_health():
         pytest.skip(

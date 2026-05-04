@@ -144,6 +144,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 0,
       "text": "# Introduction\n\nDocRunr emits predictable chunks.",
+      "start_offset": 0,
+      "end_offset": 50,
       "section_path": ["Introduction"],
       "token_count": 14,
       "char_count": 50
@@ -151,6 +153,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 1,
       "text": "## Methods\n\nChunking follows heading boundaries.",
+      "start_offset": 52,
+      "end_offset": 98,
       "section_path": ["Introduction", "Methods"],
       "token_count": 13,
       "char_count": 46
@@ -158,6 +162,8 @@ For each input document, DocRunr writes two files:
     {
       "chunk_index": 2,
       "text": "## Conclusion\n\nOutput stays stable across runs.",
+      "start_offset": 100,
+      "end_offset": 145,
       "section_path": ["Introduction", "Conclusion"],
       "token_count": 15,
       "char_count": 45
@@ -172,6 +178,8 @@ Chunk object contract:
 
 - `chunk_index`: zero-based, stable order in output
 - `text`: chunk payload from cleaned Markdown
+- `start_offset`: inclusive character offset of `text` within top-level `content`
+- `end_offset`: exclusive character offset of `text` within top-level `content`
 - `section_path`: ordered heading ancestry from top-level to deepest/current heading
 - `token_count`: token count for `text`
 - `char_count`: character count for `text`
@@ -181,6 +189,12 @@ Chunk object contract:
 - Always present on every chunk.
 - Chunks before the first heading use `[]`.
 - The last element is the chunk's most specific local section.
+
+Offset notes:
+
+- Offsets are measured against the cleaned Markdown in the top-level `content` field.
+- `content[start_offset:end_offset] == text` for each chunk.
+- Offsets are deterministic across repeated runs for identical cleaned input.
 
 ### Batch Report
 
@@ -327,7 +341,7 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 | ------------------- | ---------------------------- | ---------- |
 | `pika`              | RabbitMQ client              | BSD        |
 | `pydantic-settings` | Env-based configuration      | MIT        |
-| `minio`             | S3-compatible storage (opt.) | Apache 2.0 |
+| `boto3`             | S3-compatible storage (opt.) | Apache 2.0 |
 
 
 **Package management:** uv
@@ -427,7 +441,7 @@ docrunr/
 ├── docker-compose.yml             # Includes base + local + LLM + Ollama (TXT host HEALTH_PORT; LLM host LLM_HEALTH_PORT→8080)
 ├── docker-compose.base.yml        # Worker + RabbitMQ core stack
 ├── docker-compose.local.yml       # Local bind mounts and dev-oriented defaults
-├── docker-compose.minio.yml       # MinIO storage overlay
+├── docker-compose.seaweedfs.yml   # SeaweedFS S3 storage overlay
 ├── docker-compose.llm.yml         # LiteLLM proxy + worker-llm overlay
 ├── docker-compose.ollama.yml      # Ollama in Docker (when not on host)
 ├── litellm.yaml                   # LiteLLM proxy model config
@@ -635,7 +649,7 @@ The worker and web app communicate files through shared storage. Two backends ar
 | Backend | Use case                     | Configuration                                   |
 | ------- | ---------------------------- | ----------------------------------------------- |
 | `local` | Docker volumes, NFS mounts   | `STORAGE_TYPE=local`, `STORAGE_BASE_PATH=/data` |
-| `minio` | S3-compatible object storage | `STORAGE_TYPE=minio`, `MINIO_`* env vars        |
+| `s3`    | S3-compatible object storage | `STORAGE_TYPE=s3`, `S3_`* env vars              |
 
 
 ### Path Convention
@@ -681,13 +695,13 @@ All worker settings are environment variables. No config files. No CLI flags.
 | `RABBITMQ_QUEUE`        | `docrunr.jobs`    | Input job queue name                                                                                                                                  |
 | `RABBITMQ_RESULT_QUEUE` | `docrunr.results` | Result queue name                                                                                                                                     |
 | `RABBITMQ_DLQ_QUEUE`    | `docrunr.dlq`     | Dead-letter queue name for messages that fail after bounded retries                                                                                   |
-| `STORAGE_TYPE`          | `local`           | Storage backend: `local` or `minio`                                                                                                                   |
+| `STORAGE_TYPE`          | `local`           | Storage backend: `local` or `s3`                                                                                                                      |
 | `STORAGE_BASE_PATH`     | `/data`           | Base path for local storage                                                                                                                           |
-| `MINIO_ENDPOINT`        | `minio:9000`      | MinIO server endpoint                                                                                                                                 |
-| `MINIO_ACCESS_KEY`      |                   | MinIO access key                                                                                                                                      |
-| `MINIO_SECRET_KEY`      |                   | MinIO secret key                                                                                                                                      |
-| `MINIO_BUCKET`          | `docrunr`         | MinIO bucket name                                                                                                                                     |
-| `MINIO_SECURE`          | `false`           | Use TLS for MinIO                                                                                                                                     |
+| `S3_ENDPOINT`           | `http://seaweedfs:8333` | S3 endpoint URL (SeaweedFS, AWS S3, R2, MinIO, ...)                                                                                              |
+| `S3_ACCESS_KEY`         |                   | S3 access key                                                                                                                                         |
+| `S3_SECRET_KEY`         |                   | S3 secret key                                                                                                                                         |
+| `S3_BUCKET`             | `docrunr`         | S3 bucket name                                                                                                                                        |
+| `S3_REGION`             | `us-east-1`       | S3 region (dummy value is fine for SeaweedFS)                                                                                                         |
 | `JOB_TIMEOUT_SECONDS`   | `120`             | Per-job processing timeout                                                                                                                            |
 | `HEALTH_PORT`           | `8080`            | TXT worker health/dashboard HTTP port                                                                                                                 |
 | `LLM_HEALTH_PORT`       | `8081`            | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |

@@ -47,9 +47,9 @@
       "problemMatcher": []
     },
     {
-      "label": "test:integration:minio",
+      "label": "test:integration:s3",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration minio '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
+      "command": "node ./scripts/test.mjs integration s3 '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -286,8 +286,8 @@
     {
       "id": "dockerRunProfile",
       "type": "pickString",
-      "description": "Compose stack: local disk (TXT+LLM+Ollama) or MinIO (same + MinIO; compose files end with minio.yml).",
-      "options": ["local", "minio"],
+      "description": "Compose stack: local disk (TXT+LLM+Ollama) or SeaweedFS S3 (same + SeaweedFS; compose files end with seaweedfs.yml).",
+      "options": ["local", "s3"],
       "default": "local"
     }
   ]
