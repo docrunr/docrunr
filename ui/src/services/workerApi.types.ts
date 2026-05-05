@@ -43,6 +43,7 @@ export type WorkerJob = {
   markdown_path: string | null;
   chunks_path: string | null;
   total_tokens: number;
+  total_chars: number;
   chunk_count: number;
   duration_seconds: number;
   error: string | null;

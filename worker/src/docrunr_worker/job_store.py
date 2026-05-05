@@ -24,6 +24,7 @@ class PersistedJob:
     markdown_path: str | None
     chunks_path: str | None
     total_tokens: int
+    total_chars: int
     chunk_count: int
     duration_seconds: float
     error: str | None
@@ -147,7 +148,7 @@ class SQLiteJobStore:
             rows = conn.execute(
                 (
                     "SELECT job_id, status, filename, source_path, markdown_path, chunks_path, "
-                    "total_tokens, chunk_count, duration_seconds, error, received_at, "
+                    "total_tokens, total_chars, chunk_count, duration_seconds, error, received_at, "
                     "finished_at, updated_at, mime_type, size_bytes, priority "
                     f"FROM job_events {where_sql} "
                     "ORDER BY COALESCE(finished_at, received_at) DESC, id DESC LIMIT ?"
@@ -166,6 +167,7 @@ class SQLiteJobStore:
                     "markdown_path": row["markdown_path"],
                     "chunks_path": row["chunks_path"],
                     "total_tokens": int(row["total_tokens"]),
+                    "total_chars": int(row["total_chars"]),
                     "chunk_count": int(row["chunk_count"]),
                     "duration_seconds": float(row["duration_seconds"]),
                     "error": row["error"],
@@ -235,10 +237,10 @@ class SQLiteJobStore:
         upsert_sql = (
             "INSERT INTO job_events ("
             "job_id, status, filename, source_path, markdown_path, chunks_path, "
-            "total_tokens, chunk_count, duration_seconds, error, "
+            "total_tokens, total_chars, chunk_count, duration_seconds, error, "
             "received_at, finished_at, updated_at, mime_type, size_bytes, priority, "
             "replay_stats_suppress"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(job_id) DO UPDATE SET "
             "status = excluded.status, "
             "filename = excluded.filename, "
@@ -246,6 +248,7 @@ class SQLiteJobStore:
             "markdown_path = excluded.markdown_path, "
             "chunks_path = excluded.chunks_path, "
             "total_tokens = excluded.total_tokens, "
+            "total_chars = excluded.total_chars, "
             "chunk_count = excluded.chunk_count, "
             "duration_seconds = excluded.duration_seconds, "
             "error = excluded.error, "
@@ -303,6 +306,7 @@ class SQLiteJobStore:
                             job.markdown_path,
                             job.chunks_path,
                             job.total_tokens,
+                            job.total_chars,
                             job.chunk_count,
                             job.duration_seconds,
                             job.error,
@@ -395,6 +399,7 @@ class SQLiteJobStore:
                     markdown_path TEXT,
                     chunks_path TEXT,
                     total_tokens INTEGER NOT NULL DEFAULT 0,
+                    total_chars INTEGER NOT NULL DEFAULT 0,
                     chunk_count INTEGER NOT NULL DEFAULT 0,
                     duration_seconds REAL NOT NULL DEFAULT 0,
                     error TEXT,
@@ -435,6 +440,8 @@ class SQLiteJobStore:
             )
         if "priority" not in names:
             conn.execute("ALTER TABLE job_events ADD COLUMN priority INTEGER NOT NULL DEFAULT 0")
+        if "total_chars" not in names:
+            conn.execute("ALTER TABLE job_events ADD COLUMN total_chars INTEGER NOT NULL DEFAULT 0")
 
     @staticmethod
     def _migrate_job_events_lifecycle(conn: sqlite3.Connection) -> None:
@@ -460,6 +467,7 @@ class SQLiteJobStore:
                 markdown_path TEXT,
                 chunks_path TEXT,
                 total_tokens INTEGER NOT NULL DEFAULT 0,
+                total_chars INTEGER NOT NULL DEFAULT 0,
                 chunk_count INTEGER NOT NULL DEFAULT 0,
                 duration_seconds REAL NOT NULL DEFAULT 0,
                 error TEXT,
@@ -574,6 +582,7 @@ def _event_to_job(event: dict[str, object]) -> PersistedJob:
         markdown_path=_as_optional_str(event.get("markdown_path")),
         chunks_path=_as_optional_str(event.get("chunks_path")),
         total_tokens=_as_int(event.get("total_tokens")),
+        total_chars=_as_int(event.get("total_chars")),
         chunk_count=_as_int(event.get("chunk_count")),
         duration_seconds=_as_float(event.get("duration_seconds")),
         error=_as_optional_str(event.get("error")),

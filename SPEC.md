@@ -139,7 +139,8 @@ For each input document, DocRunr writes two files:
   "parser": "BeautifulSoupHtmlParser",
   "duration_seconds": 0.18,
   "total_tokens": 42,
-  "content": "# Introduction\n\nDocRunr emits predictable chunks.\n\n## Methods\n\nChunking follows heading boundaries.\n\n## Conclusion\n\nOutput stays stable across runs.\n",
+  "total_chars": 141,
+  "content": "# Introduction\n\nDocRunr emits predictable chunks.\n\n\n## Methods\n\nChunking follows heading boundaries.\n\n\n## Conclusion\n\nOutput stays stable across runs.\n",
   "chunks": [
     {
       "chunk_index": 0,
@@ -526,6 +527,7 @@ Published by the worker to `docrunr.results`:
   "markdown_path": "output/2026/03/15/14/a1b2c3d4-e5f6-7890-abcd-ef1234567890.md",
   "chunks_path": "output/2026/03/15/14/a1b2c3d4-e5f6-7890-abcd-ef1234567890.json",
   "total_tokens": 4830,
+  "total_chars": 12345,
   "chunk_count": 12,
   "duration_seconds": 2.41,
   "error": null,

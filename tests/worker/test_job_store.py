@@ -20,6 +20,7 @@ def _job(
     finished_at: str | None = None,
     duration_seconds: float,
     total_tokens: int = 0,
+    total_chars: int = 0,
     chunk_count: int = 0,
     markdown_path: str | None = None,
     chunks_path: str | None = None,
@@ -37,6 +38,7 @@ def _job(
         "markdown_path": markdown_path,
         "chunks_path": chunks_path,
         "total_tokens": total_tokens,
+        "total_chars": total_chars,
         "chunk_count": chunk_count,
         "duration_seconds": duration_seconds,
         "error": error,
@@ -65,6 +67,7 @@ def test_persists_jobs_and_stats(tmp_path: Path) -> None:
             markdown_path="output/2026/04/11/14/a.md",
             chunks_path="output/2026/04/11/14/a.json",
             total_tokens=10,
+            total_chars=5,
             chunk_count=2,
             duration_seconds=1.25,
             finished_at="2026-04-02T19:39:38Z",
@@ -94,9 +97,11 @@ def test_persists_jobs_and_stats(tmp_path: Path) -> None:
     assert jobs["items"][1]["mime_type"] == "application/pdf"
     assert jobs["items"][1]["size_bytes"] == 12_288
     assert jobs["items"][1]["priority"] == 0
+    assert jobs["items"][1]["total_chars"] == 5
     assert jobs["items"][0]["mime_type"] == ""
     assert jobs["items"][0]["size_bytes"] == 0
     assert jobs["items"][0]["priority"] == 0
+    assert jobs["items"][0]["total_chars"] == 0
 
     stats = store.stats_dict()
     assert stats["processed"] == 1

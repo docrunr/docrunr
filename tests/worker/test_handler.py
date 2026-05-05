@@ -64,6 +64,7 @@ def _ok_result(source: str = "j1.pdf") -> Result:
             )
         ],
         total_tokens=2,
+        total_chars=11,
         mime_type="application/pdf",
         size_bytes=4,
     )
@@ -92,6 +93,7 @@ def test_handle_job_returns_error_when_convert_returns_failed_result(tmp_path: P
     assert row.get("mime_type") == ""
     assert row.get("size_bytes") == 0
     assert row.get("priority") == 0
+    assert row.get("total_chars") == 0
     assert not (base / "output/2026/03/15/14/j1.md").exists()
 
 
@@ -164,6 +166,7 @@ def test_handle_extract_job_writes_markdown_and_chunks(tmp_path: Path) -> None:
     assert row["status"] == "ok"
     assert row["markdown_path"] == "output/2026/03/15/14/job1.md"
     assert row["chunks_path"] == "output/2026/03/15/14/job1.json"
+    assert row["total_chars"] == 11
     assert row["mime_type"] == "application/pdf"
     assert row["size_bytes"] == 4
     assert row["priority"] == 240

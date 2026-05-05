@@ -93,6 +93,7 @@ docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-co
   "markdown_path": "output/…/….md",
   "chunks_path": "output/…/….json",
   "total_tokens": 0,
+  "total_chars": 0,
   "chunk_count": 0,
   "duration_seconds": 0,
   "error": null,

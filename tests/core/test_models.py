@@ -79,15 +79,16 @@ class TestResult:
                     chunk_id="chunk_b",
                     source_doc_id="doc_1",
                     chunk_index=1,
-                    text="b",
+                    text="bc",
                     token_count=20,
-                    char_count=1,
+                    char_count=2,
                     splitter_version="recursive_v1_token300_overlap0",
                 ),
             ],
         )
         r.compute_totals()
         assert r.total_tokens == 30
+        assert r.total_chars == 3
 
     def test_to_dict_key_order(self) -> None:
         r = Result(source="test.txt", markdown="# Hello")
@@ -104,9 +105,11 @@ class TestResult:
             "parser",
             "duration_seconds",
             "total_tokens",
+            "total_chars",
             "content",
             "chunks",
         ]
+        assert d["total_chars"] == 0
 
     def test_write(self, tmp_out: Path) -> None:
         r = Result(

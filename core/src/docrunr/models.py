@@ -67,6 +67,7 @@ class Result:
     chunks: list[Chunk] = field(default_factory=list)
     content_hash: str = ""
     total_tokens: int = 0
+    total_chars: int = 0
     mime_type: str = ""
     size_bytes: int = 0
     parser: str = ""
@@ -82,6 +83,7 @@ class Result:
 
     def compute_totals(self) -> None:
         self.total_tokens = sum(c.token_count for c in self.chunks)
+        self.total_chars = sum(len(c.text) for c in self.chunks)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dict with stable key order."""
@@ -94,6 +96,7 @@ class Result:
             "parser": self.parser,
             "duration_seconds": round(self.duration_seconds, 2),
             "total_tokens": self.total_tokens,
+            "total_chars": self.total_chars,
             "content": self.markdown,
             "chunks": [c.to_dict() for c in self.chunks],
         }
