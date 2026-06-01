@@ -4,7 +4,7 @@
 #   docker run docrunr-llm:latest
 
 # Stage 1: UI build (locked to LLM mode)
-FROM node:25-bookworm-slim AS ui-builder
+FROM node:26-bookworm-slim AS ui-builder
 
 WORKDIR /app
 
