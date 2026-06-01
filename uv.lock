@@ -803,7 +803,7 @@ wheels = [
 
 [[package]]
 name = "docrunr"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "core" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -845,7 +845,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-worker"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "worker" }
 dependencies = [
     { name = "boto3" },
@@ -879,7 +879,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-worker-llm"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "worker-llm" }
 dependencies = [
     { name = "boto3" },
@@ -913,7 +913,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-workspace"
-version = "0.1.1"
+version = "0.1.2"
 source = { virtual = "." }
 dependencies = [
     { name = "docrunr" },
@@ -944,7 +944,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.15.12" },
-    { name = "skylos", specifier = ">=4.10.0" },
+    { name = "skylos", specifier = ">=4.22.1" },
     { name = "types-psutil", specifier = ">=5.9" },
 ]
 
@@ -3665,7 +3665,7 @@ wheels = [
 
 [[package]]
 name = "skylos"
-version = "4.10.0"
+version = "4.22.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ca9" },
@@ -3680,15 +3680,16 @@ dependencies = [
     { name = "rich" },
     { name = "textual" },
     { name = "tree-sitter" },
+    { name = "tree-sitter-dart-orchard" },
     { name = "tree-sitter-go" },
     { name = "tree-sitter-java" },
     { name = "tree-sitter-php" },
     { name = "tree-sitter-rust" },
     { name = "tree-sitter-typescript" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/0e/b8394d2593f5138a3d17ed4913c5a6fc3669d29e94625338575df5d2789d/skylos-4.10.0.tar.gz", hash = "sha256:df436bf2a8666fe4ed30c7581ece140c10ef634847cda3561243cbb9fbe0de85", size = 897155, upload-time = "2026-05-02T03:00:51.797Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/25/9d89259d7a2c817ac3e3b8c4f80d045ae50fbdba4e077ec053cb4b67cc93/skylos-4.22.1.tar.gz", hash = "sha256:e71d51efa9c02de802a7df364cafcdc001a38432bbbb4c3d41701208be48eef4", size = 1176983, upload-time = "2026-05-30T16:09:18.855Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/9e/62d66054f3d5f3ac073139324dc9632bb74f24bfc986873ee74d1fab443d/skylos-4.10.0-py3-none-any.whl", hash = "sha256:3272a06e54153f3199133df3b606f22b47a7e11d1c88d89892881362f3f12013", size = 675691, upload-time = "2026-05-02T03:00:50.452Z" },
+    { url = "https://files.pythonhosted.org/packages/33/73/ecb96e9b245bd1fe562c15b6e11e616a078e41a39dbf5b97a835b75472ee/skylos-4.22.1-py3-none-any.whl", hash = "sha256:e7534c10e768c8723ee9658cb07122460489c637baa884bd3b3457fe5fcd88c7", size = 918971, upload-time = "2026-05-30T16:09:17.167Z" },
 ]
 
 [[package]]
@@ -4071,6 +4072,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/50/5a/6361df7f3fa2310c53a0d26b4702a261c332da16fa9d801e381e3a86e25f/tree_sitter_c-0.24.1-cp310-abi3-win_amd64.whl", hash = "sha256:290bff0f9c79c966496ebae45042f77543e6e4aea725f40587a8611d566231a8", size = 84703, upload-time = "2025-05-24T17:32:56.084Z" },
     { url = "https://files.pythonhosted.org/packages/22/6a/210a302e8025ac492cbaea58d3720d66b7d8034c5d747ac5e4d2d235aa25/tree_sitter_c-0.24.1-cp310-abi3-win_arm64.whl", hash = "sha256:d46bbda06f838c2dcb91daf767813671fd366b49ad84ff37db702129267b46e1", size = 82715, upload-time = "2025-05-24T17:32:57.248Z" },
 ]
+
+[[package]]
+name = "tree-sitter-dart-orchard"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/43/cc963608a3a62d4cbc99647f6cec4e49944612b6673ef208d8a1e252cf51/tree_sitter_dart_orchard-0.3.2.tar.gz", hash = "sha256:99b6e7ce0e41b3dec95c6985dded2a967e2c9ccd7085cff4d4b743c75b50db40", size = 253313, upload-time = "2025-11-17T15:53:26.69Z" }
 
 [[package]]
 name = "tree-sitter-go"
