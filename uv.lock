@@ -803,7 +803,7 @@ wheels = [
 
 [[package]]
 name = "docrunr"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "core" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -829,7 +829,7 @@ dev = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "docling", specifier = ">=2.80.0" },
-    { name = "kreuzberg", specifier = ">=4.6.0" },
+    { name = "kreuzberg", specifier = ">=4.9.7" },
     { name = "magika", specifier = ">=0.6" },
     { name = "markitdown", extras = ["all"], specifier = ">=0.1.5" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
@@ -845,7 +845,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-worker"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "worker" }
 dependencies = [
     { name = "boto3" },
@@ -879,7 +879,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-worker-llm"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "worker-llm" }
 dependencies = [
     { name = "boto3" },
@@ -913,7 +913,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-workspace"
-version = "0.1.1"
+version = "0.1.2"
 source = { virtual = "." }
 dependencies = [
     { name = "docrunr" },
@@ -1494,14 +1494,14 @@ wheels = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.6.0"
+version = "4.9.7"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/eb/24/2df0e8dd4c9ad6d498f82e766dd78a223e2cd4ac9f7750de63e6d1422903/kreuzberg-4.6.0.tar.gz", hash = "sha256:dac32833bc2a390e8da1bca5e1ce00934776ce83f99d413b8c11acc3f2ccef5c", size = 2132162, upload-time = "2026-03-24T12:59:07.489Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/e8/45bfc4e83f34275bee17a3a82316a316d104393aac0c5a2bb37e8f15b150/kreuzberg-4.9.7.tar.gz", hash = "sha256:d5bfe4b072f0715d7b480f7671d5cb9a7666191b76f3bd7479582316260c2eb2", size = 2460436, upload-time = "2026-05-08T19:49:39.461Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/21/a6/62fa2782652df3e9926d8c9b1c0f93e86183c49bef40ba6a20c7960c73ce/kreuzberg-4.6.0-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:c04c56c4c602150e99b234645e871f10fd1e9ed7f8306cc3fb205d21448dcc25", size = 49852884, upload-time = "2026-03-24T12:58:47.95Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/8f/1763c751acc9c4ef4b68b5d3ea7d0b06074675a7abe6896d20e14719c086/kreuzberg-4.6.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:32cbe855b06aebbf25fb21684daa8a1e937ddcc1c7c1deeaf4afdddbe92d9822", size = 57918790, upload-time = "2026-03-24T12:58:53.156Z" },
-    { url = "https://files.pythonhosted.org/packages/07/2c/0ec08c044bd111269d445440d6827beda9f85ff9d2481cbc92eadc6b2bd3/kreuzberg-4.6.0-cp310-abi3-manylinux_2_39_x86_64.whl", hash = "sha256:c86cceb349852123b34edb630dbd896f4b8fc0276ea94ea4267c4737e715ed18", size = 57575831, upload-time = "2026-03-24T12:58:58.437Z" },
-    { url = "https://files.pythonhosted.org/packages/60/5c/ac2d2bb25201a0b7abc15fdf8af70c2cc60a7850a18649dac90974cf97b1/kreuzberg-4.6.0-cp310-abi3-win_amd64.whl", hash = "sha256:cc573d911d856bc8e3a257cbaa19bf4f4ac0600c8bf80a65bec3d81f715a24e2", size = 57407009, upload-time = "2026-03-24T12:59:04.295Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/6b/4c7e37496a42a96a6b90ee502a2e1623303814bcba4d69f7e727cfd98f76/kreuzberg-4.9.7-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:6aac81782f5c3481d0aa7cd1d08917b11189318e1c6f1ffc8cd67b6b561d99d4", size = 28761354, upload-time = "2026-05-08T19:49:26.181Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/93/2a9f2798771109fdccc3ced689e97527a3c7f4696faeeadfa0686b762233/kreuzberg-4.9.7-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:c2ffc3c8c93bb6947dad9d731fe7b13c7c1dfd749c9184090a7cd2cc075cfcae", size = 33296336, upload-time = "2026-05-08T19:49:30.207Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/f3/80554a84c9647c386f773c615426bd51d907e0c8d055ea57406b559af53c/kreuzberg-4.9.7-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ff7d9eda62a453e71a5dbff7e72164ee989a44274957c5eb152cf0e93027b2e7", size = 35523358, upload-time = "2026-05-08T19:49:33.464Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/f0/d8831e2fea2ac7c88137f901bef77e780dd68602a8d4d1a203d168879f4d/kreuzberg-4.9.7-cp310-abi3-win_amd64.whl", hash = "sha256:cdcee54875b461b1c16fb67b1c86a06ab91353c6c3811094f3a9a91519ec07da", size = 33123446, upload-time = "2026-05-08T19:49:36.784Z" },
 ]
 
 [[package]]
