@@ -62,6 +62,12 @@ docker compose up -d --build
 - Open http://localhost:8081 for the LLM dashboard.
 - Open http://localhost:8082 for the public API Swagger interface.
 
+**Workers only** (own/platform API consumes `docrunr.results` — omit the API overlay so it does not compete for those queues; lifecycle publish stays off):
+
+```bash
+docker compose -f docker-compose.base.yml -f docker-compose.local.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml up -d --build
+```
+
 Upload and poll entirely over HTTP:
 
 ```bash

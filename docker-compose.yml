@@ -1,4 +1,5 @@
-# Default stack: TXT + LLM workers (TXT host HEALTH_PORT; LLM host LLM_HEALTH_PORT→8080), LiteLLM, Ollama, local ./.data.
+# Default local stack: TXT + LLM workers, public API, LiteLLM, Ollama, ./.data.
+# For workers-only (own/platform API): omit docker-compose.api.yml — see README.
 include:
   - docker-compose.base.yml
   - docker-compose.local.yml

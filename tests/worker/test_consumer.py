@@ -13,7 +13,11 @@ from docrunr_worker.consumer import Consumer
 from docrunr_worker.handler import ExtractionOutcome
 
 
-def _settings(*, worker_concurrency: int = 1) -> WorkerSettings:
+def _settings(
+    *,
+    worker_concurrency: int = 1,
+    rabbitmq_lifecycle_queue: str = "docrunr.lifecycle",
+) -> WorkerSettings:
     return WorkerSettings(
         rabbitmq_host="rabbitmq",
         rabbitmq_port=5672,
@@ -22,14 +26,24 @@ def _settings(*, worker_concurrency: int = 1) -> WorkerSettings:
         rabbitmq_queue="docrunr.jobs",
         rabbitmq_result_queue="docrunr.results",
         rabbitmq_dlq_queue="docrunr.dlq",
-        rabbitmq_lifecycle_queue="docrunr.lifecycle",
+        rabbitmq_lifecycle_queue=rabbitmq_lifecycle_queue,
         job_timeout_seconds=120,
         worker_concurrency=worker_concurrency,
     )
 
 
-def _consumer(*, worker_concurrency: int = 1) -> Consumer:
-    return Consumer(_settings(worker_concurrency=worker_concurrency), storage=Mock())
+def _consumer(
+    *,
+    worker_concurrency: int = 1,
+    rabbitmq_lifecycle_queue: str = "docrunr.lifecycle",
+) -> Consumer:
+    return Consumer(
+        _settings(
+            worker_concurrency=worker_concurrency,
+            rabbitmq_lifecycle_queue=rabbitmq_lifecycle_queue,
+        ),
+        storage=Mock(),
+    )
 
 
 def _outcome(
@@ -96,6 +110,50 @@ def test_connect_declares_expected_queues() -> None:
         assert declare_calls[1].kwargs.get("arguments") is None
         assert declare_calls[2].kwargs.get("arguments") is None
         consumer._channel.basic_qos.assert_called_once_with(prefetch_count=4)  # type: ignore[union-attr]
+
+
+def test_connect_skips_lifecycle_queue_when_disabled() -> None:
+    with patch("docrunr_worker.consumer.pika.BlockingConnection"):
+        consumer = _consumer(rabbitmq_lifecycle_queue="")
+        consumer.connect()
+        declared = [
+            c.kwargs["queue"]
+            for c in consumer._channel.queue_declare.call_args_list  # type: ignore[union-attr]
+        ]
+        assert declared == ["docrunr.jobs", "docrunr.results", "docrunr.dlq"]
+
+
+def test_extraction_without_lifecycle_publishes_result_only() -> None:
+    consumer = _consumer(rabbitmq_lifecycle_queue="")
+    channel = Mock()
+    method = SimpleNamespace(delivery_tag=7, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job") as record_job,
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome(),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/11/14/a.pdf"}',
+        )
+
+    assert channel.basic_publish.call_args_list == [
+        call(
+            exchange="",
+            routing_key="docrunr.results",
+            body=b'{"job_id":"job-1","status":"ok","duration_seconds":1.25}',
+            properties=ANY,
+        ),
+    ]
+    assert record_job.call_count == 2
+    assert record_job.call_args_list[0].args[0]["status"] == "processing"
+    channel.basic_ack.assert_called_once_with(delivery_tag=7)
 
 
 def test_extraction_publishes_result_and_ack() -> None:

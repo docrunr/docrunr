@@ -576,7 +576,7 @@ When `RABBITMQ_LIFECYCLE_QUEUE` is non-empty (Compose API overlay sets `docrunr.
 }
 ```
 
-Without an API gateway this queue stays unset so no orphan lifecycle queue is declared.
+Without an API gateway leave `RABBITMQ_LIFECYCLE_QUEUE` empty (worker default) so no orphan lifecycle queue is declared. Do not run `docrunr-api` alongside another consumer of `docrunr.results` / `docrunr.llm.results`.
 
 ---
 
