@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node ./scripts/docker.mjs run [local|s3]
- *   node ./scripts/docker.mjs build [all|txt|llm]
+ *   node ./scripts/docker.mjs build [all|txt|llm|api]
  */
 
 import { spawnSync } from 'node:child_process';
@@ -24,6 +24,8 @@ function composeFileArgs(profile) {
       '-f',
       'docker-compose.llm.yml',
       '-f',
+      'docker-compose.api.yml',
+      '-f',
       'docker-compose.ollama.yml',
       '-f',
       'docker-compose.seaweedfs.yml',
@@ -36,6 +38,8 @@ function composeFileArgs(profile) {
     'docker-compose.local.yml',
     '-f',
     'docker-compose.llm.yml',
+    '-f',
+    'docker-compose.api.yml',
     '-f',
     'docker-compose.ollama.yml',
   ];
@@ -62,16 +66,19 @@ function runCompose(profile) {
   process.exit(ps.status ?? (ps.error ? 1 : 0));
 }
 
-/** @param {'all' | 'txt' | 'llm'} target */
+/** @param {'all' | 'txt' | 'llm' | 'api'} target */
 function runBuild(target) {
   const steps =
     target === 'all'
       ? [
           { args: ['docker', 'build', '-t', 'docrunr:latest', '.'] },
           { args: ['docker', 'build', '-f', 'Dockerfile.llm', '-t', 'docrunr-llm:latest', '.'] },
+          { args: ['docker', 'build', '-f', 'Dockerfile.api', '-t', 'docrunr-api:latest', '.'] },
         ]
       : target === 'llm'
         ? [{ args: ['docker', 'build', '-f', 'Dockerfile.llm', '-t', 'docrunr-llm:latest', '.'] }]
+        : target === 'api'
+          ? [{ args: ['docker', 'build', '-f', 'Dockerfile.api', '-t', 'docrunr-api:latest', '.'] }]
         : [{ args: ['docker', 'build', '-t', 'docrunr:latest', '.'] }];
 
   for (const { args } of steps) {
@@ -92,7 +99,7 @@ function runBuild(target) {
 function printHelp() {
   console.log(`Usage:
   node ./scripts/docker.mjs run [local|s3]   default: local
-  node ./scripts/docker.mjs build [all|txt|llm]   default: all
+  node ./scripts/docker.mjs build [all|txt|llm|api]   default: all
 `);
 }
 
@@ -120,9 +127,9 @@ function main() {
   }
 
   if (command === 'build') {
-    const target = arg === 'txt' || arg === 'llm' ? arg : arg === 'all' || !arg ? 'all' : null;
-    if (arg && !['all', 'txt', 'llm'].includes(arg)) {
-      console.error(`Unknown build target: ${arg} (use all, txt, or llm)`);
+    const target = ['txt', 'llm', 'api'].includes(arg) ? arg : arg === 'all' || !arg ? 'all' : null;
+    if (arg && !['all', 'txt', 'llm', 'api'].includes(arg)) {
+      console.error(`Unknown build target: ${arg} (use all, txt, llm, or api)`);
       process.exit(1);
     }
     runBuild(target ?? 'all');

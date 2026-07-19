@@ -1,0 +1,46 @@
+# Local public API gateway. The API consumes both worker result queues.
+services:
+  api:
+    image: ${DOCRUNR_API_IMAGE:-docrunr-api:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      API_KEY: ${API_KEY:-}
+      API_ALLOW_UNAUTHENTICATED_PUBLIC: "true"
+      API_DB_PATH: /db/docrunr-api.sqlite
+      API_MAX_UPLOAD_BYTES: ${API_MAX_UPLOAD_BYTES:-104857600}
+      RABBITMQ_HOST: ${RABBITMQ_HOST}
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-docrunr.jobs}
+      RABBITMQ_RESULT_QUEUE: ${RABBITMQ_RESULT_QUEUE:-docrunr.results}
+      RABBITMQ_LLM_RESULT_QUEUE: ${RABBITMQ_LLM_RESULT_QUEUE:-docrunr.llm.results}
+      RABBITMQ_LIFECYCLE_QUEUE: ${RABBITMQ_LIFECYCLE_QUEUE:-docrunr.lifecycle}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/data}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-docrunr}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+      LITELLM_TIMEOUT_SECONDS: ${LITELLM_TIMEOUT_SECONDS:-10}
+      LITELLM_PROFILES_CACHE_SECONDS: ${LITELLM_PROFILES_CACHE_SECONDS:-30}
+    volumes:
+      - ./.data:/data
+      - api-db:/db
+    ports:
+      - "127.0.0.1:${DOCRUNR_API_PORT:-8082}:8080"
+
+volumes:
+  api-db:
+    name: docrunr-api-db

@@ -5,6 +5,8 @@ description = "Workspace root for the DocRunr monorepo."
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "docrunr",
+    "docrunr-api",
+    "docrunr-runtime",
     "docrunr-worker",
     "docrunr-worker-llm",
 ]
@@ -20,10 +22,12 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["core", "worker", "worker-llm"]
+members = ["api", "core", "runtime", "worker", "worker-llm"]
 
 [tool.uv.sources]
 docrunr = { workspace = true }
+docrunr-api = { workspace = true }
+docrunr-runtime = { workspace = true }
 docrunr-worker = { workspace = true }
 docrunr-worker-llm = { workspace = true }
 torch = { index = "pytorch-cpu" }

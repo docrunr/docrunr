@@ -33,12 +33,15 @@ COPY pyproject.toml uv.lock ./
 
 # Copy all member pyproject.toml files for dependency resolution
 COPY core/pyproject.toml ./core/
+COPY api/pyproject.toml ./api/
+COPY runtime/pyproject.toml ./runtime/
 COPY worker/pyproject.toml ./worker/
 COPY worker-llm/pyproject.toml ./worker-llm/
 
 # Install worker-llm dependencies (not core heavy ML deps — just litellm + storage + queue)
 RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-worker-llm
 
+COPY runtime/src/ ./runtime/src/
 COPY worker-llm/src/ ./worker-llm/src/
 RUN uv sync --frozen --no-dev --package docrunr-worker-llm
 
@@ -56,6 +59,7 @@ RUN groupadd --gid 1000 docrunr \
 WORKDIR /app
 
 COPY --from=builder --chown=docrunr:docrunr /app/.venv /app/.venv
+COPY --from=builder --chown=docrunr:docrunr /app/runtime/src /app/runtime/src
 COPY --from=builder --chown=docrunr:docrunr /app/worker-llm/src /app/worker-llm/src
 COPY --from=ui-builder --chown=docrunr:docrunr /app/ui/dist /app/worker-llm/src/docrunr_worker_llm/ui_dist
 

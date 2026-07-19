@@ -3,4 +3,5 @@ include:
   - docker-compose.base.yml
   - docker-compose.local.yml
   - docker-compose.llm.yml
+  - docker-compose.api.yml
   - docker-compose.ollama.yml

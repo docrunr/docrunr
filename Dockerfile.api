@@ -1,0 +1,51 @@
+# DocRunr API — lightweight HTTP gateway for the worker stack
+FROM python:3.13-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+COPY api/pyproject.toml ./api/
+COPY core/pyproject.toml ./core/
+COPY runtime/pyproject.toml ./runtime/
+COPY worker/pyproject.toml ./worker/
+COPY worker-llm/pyproject.toml ./worker-llm/
+RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-api
+
+COPY api/src/ ./api/src/
+COPY runtime/src/ ./runtime/src/
+RUN uv sync --frozen --no-dev --package docrunr-api
+
+FROM python:3.13-slim AS runtime
+
+ARG DOCRUNR_VERSION=
+LABEL org.opencontainers.image.title="DocRunr API"
+LABEL org.opencontainers.image.description="Local HTTP API gateway for DocRunr workers"
+LABEL org.opencontainers.image.source="https://github.com/docrunr/docrunr"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.version="${DOCRUNR_VERSION}"
+
+RUN groupadd --gid 1000 docrunr \
+    && useradd --uid 1000 --gid docrunr --shell /bin/bash --create-home docrunr
+WORKDIR /app
+
+COPY --from=builder --chown=docrunr:docrunr /app/.venv /app/.venv
+COPY --from=builder --chown=docrunr:docrunr /app/api/src /app/api/src
+COPY --from=builder --chown=docrunr:docrunr /app/runtime/src /app/runtime/src
+
+RUN mkdir -p /data/input /data/output /db && chown -R docrunr:docrunr /data /db
+
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV API_HOST=0.0.0.0
+ENV API_PORT=8080
+
+USER docrunr
+RUN python -c "import docrunr_api; print('DocRunr API loaded')"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+
+EXPOSE 8080
+ENTRYPOINT ["docrunr-api"]

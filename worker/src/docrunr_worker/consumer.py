@@ -114,6 +114,7 @@ class Consumer:
                 self._channel.queue_declare(queue=queue_name, durable=True)
         self._channel.queue_declare(queue=self._settings.rabbitmq_result_queue, durable=True)
         self._channel.queue_declare(queue=self._settings.rabbitmq_dlq_queue, durable=True)
+        self._channel.queue_declare(queue=self._settings.rabbitmq_lifecycle_queue, durable=True)
         self._channel.basic_qos(prefetch_count=self._settings.worker_concurrency)
 
         stats.rabbitmq_connected = True
@@ -272,8 +273,26 @@ class Consumer:
             logger.debug("Failed to record extraction outcome in stats", exc_info=True)
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
-    def _persist_processing(self, body: bytes, *, delivery_id: str) -> None:
+    def _persist_processing(
+        self,
+        channel: BlockingChannel,
+        body: bytes,
+        *,
+        delivery_id: str,
+    ) -> None:
         req = parse_job_request_from_body(body, delivery_id=delivery_id)
+        self._publish_json(
+            channel=channel,
+            queue_name=self._settings.rabbitmq_lifecycle_queue,
+            payload_json=json.dumps(
+                {
+                    "job_id": req.job_id,
+                    "state": PROCESSING,
+                    "occurred_at": datetime.now(UTC).isoformat(),
+                },
+                separators=(",", ":"),
+            ),
+        )
         try:
             stats.record_job(
                 {
@@ -435,7 +454,7 @@ class Consumer:
         body: bytes,
     ) -> None:
         delivery_id = uuid.uuid4().hex
-        self._persist_processing(body, delivery_id=delivery_id)
+        self._persist_processing(channel, body, delivery_id=delivery_id)
         if self._settings.worker_concurrency <= 1:
             try:
                 outcome = handle_extract_job(

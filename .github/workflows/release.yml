@@ -37,6 +37,9 @@ jobs:
       - name: Type check worker
         run: UV_CACHE_DIR=.uv-cache uv run mypy worker/src/docrunr_worker
 
+      - name: Type check runtime and API
+        run: UV_CACHE_DIR=.uv-cache uv run mypy runtime/src/docrunr_runtime api/src/docrunr_api
+
       - name: Tests
         run: UV_CACHE_DIR=.uv-cache uv run pytest -q
 
@@ -114,6 +117,18 @@ jobs:
           - image_kind: llm
             dockerfile: Dockerfile.llm
             image_repo_suffix: docrunr-llm
+            platform: linux/arm64
+            platform_suffix: arm64
+            needs_qemu: true
+          - image_kind: api
+            dockerfile: Dockerfile.api
+            image_repo_suffix: docrunr-api
+            platform: linux/amd64
+            platform_suffix: amd64
+            needs_qemu: false
+          - image_kind: api
+            dockerfile: Dockerfile.api
+            image_repo_suffix: docrunr-api
             platform: linux/arm64
             platform_suffix: arm64
             needs_qemu: true
@@ -195,6 +210,8 @@ jobs:
             image_repo_suffix: docrunr
           - image_kind: llm
             image_repo_suffix: docrunr-llm
+          - image_kind: api
+            image_repo_suffix: docrunr-api
     permissions:
       contents: read
       packages: write
