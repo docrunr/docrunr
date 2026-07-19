@@ -40,6 +40,9 @@ jobs:
       - name: Type check worker
         run: UV_CACHE_DIR=.uv-cache uv run mypy worker/src/docrunr_worker
 
+      - name: Type check runtime and API
+        run: UV_CACHE_DIR=.uv-cache uv run mypy runtime/src/docrunr_runtime api/src/docrunr_api
+
       - name: Tests
         run: UV_CACHE_DIR=.uv-cache uv run pytest -q
 

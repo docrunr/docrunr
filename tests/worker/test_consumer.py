@@ -13,7 +13,11 @@ from docrunr_worker.consumer import Consumer
 from docrunr_worker.handler import ExtractionOutcome
 
 
-def _settings(*, worker_concurrency: int = 1) -> WorkerSettings:
+def _settings(
+    *,
+    worker_concurrency: int = 1,
+    rabbitmq_lifecycle_queue: str = "docrunr.lifecycle",
+) -> WorkerSettings:
     return WorkerSettings(
         rabbitmq_host="rabbitmq",
         rabbitmq_port=5672,
@@ -22,13 +26,24 @@ def _settings(*, worker_concurrency: int = 1) -> WorkerSettings:
         rabbitmq_queue="docrunr.jobs",
         rabbitmq_result_queue="docrunr.results",
         rabbitmq_dlq_queue="docrunr.dlq",
+        rabbitmq_lifecycle_queue=rabbitmq_lifecycle_queue,
         job_timeout_seconds=120,
         worker_concurrency=worker_concurrency,
     )
 
 
-def _consumer(*, worker_concurrency: int = 1) -> Consumer:
-    return Consumer(_settings(worker_concurrency=worker_concurrency), storage=Mock())
+def _consumer(
+    *,
+    worker_concurrency: int = 1,
+    rabbitmq_lifecycle_queue: str = "docrunr.lifecycle",
+) -> Consumer:
+    return Consumer(
+        _settings(
+            worker_concurrency=worker_concurrency,
+            rabbitmq_lifecycle_queue=rabbitmq_lifecycle_queue,
+        ),
+        storage=Mock(),
+    )
 
 
 def _outcome(
@@ -85,11 +100,60 @@ def test_connect_declares_expected_queues() -> None:
         assert params.blocked_connection_timeout == 300
         declare_calls = consumer._channel.queue_declare.call_args_list  # type: ignore[union-attr]
         declared = [c.kwargs["queue"] for c in declare_calls]
-        assert declared == ["docrunr.jobs", "docrunr.results", "docrunr.dlq"]
+        assert declared == [
+            "docrunr.jobs",
+            "docrunr.results",
+            "docrunr.dlq",
+            "docrunr.lifecycle",
+        ]
         assert declare_calls[0].kwargs.get("arguments") == {"x-max-priority": 255}
         assert declare_calls[1].kwargs.get("arguments") is None
         assert declare_calls[2].kwargs.get("arguments") is None
         consumer._channel.basic_qos.assert_called_once_with(prefetch_count=4)  # type: ignore[union-attr]
+
+
+def test_connect_skips_lifecycle_queue_when_disabled() -> None:
+    with patch("docrunr_worker.consumer.pika.BlockingConnection"):
+        consumer = _consumer(rabbitmq_lifecycle_queue="")
+        consumer.connect()
+        declared = [
+            c.kwargs["queue"]
+            for c in consumer._channel.queue_declare.call_args_list  # type: ignore[union-attr]
+        ]
+        assert declared == ["docrunr.jobs", "docrunr.results", "docrunr.dlq"]
+
+
+def test_extraction_without_lifecycle_publishes_result_only() -> None:
+    consumer = _consumer(rabbitmq_lifecycle_queue="")
+    channel = Mock()
+    method = SimpleNamespace(delivery_tag=7, redelivered=False)
+
+    with (
+        patch("docrunr_worker.consumer.stats.record_job") as record_job,
+        patch(
+            "docrunr_worker.consumer.handle_extract_job",
+            return_value=_outcome(),
+        ),
+    ):
+        consumer._on_message_for_queue(
+            "docrunr.jobs",
+            channel,
+            method,
+            None,
+            b'{"job_id":"job-1","source_path":"input/2026/04/11/14/a.pdf"}',
+        )
+
+    assert channel.basic_publish.call_args_list == [
+        call(
+            exchange="",
+            routing_key="docrunr.results",
+            body=b'{"job_id":"job-1","status":"ok","duration_seconds":1.25}',
+            properties=ANY,
+        ),
+    ]
+    assert record_job.call_count == 2
+    assert record_job.call_args_list[0].args[0]["status"] == "processing"
+    channel.basic_ack.assert_called_once_with(delivery_tag=7)
 
 
 def test_extraction_publishes_result_and_ack() -> None:
@@ -115,10 +179,16 @@ def test_extraction_publishes_result_and_ack() -> None:
     assert channel.basic_publish.call_args_list == [
         call(
             exchange="",
+            routing_key="docrunr.lifecycle",
+            body=ANY,
+            properties=ANY,
+        ),
+        call(
+            exchange="",
             routing_key="docrunr.results",
             body=b'{"job_id":"job-1","status":"ok","duration_seconds":1.25}',
             properties=ANY,
-        )
+        ),
     ]
     assert record_job.call_count == 2
     proc = record_job.call_args_list[0].args[0]
@@ -284,11 +354,13 @@ def test_parallel_extraction_completes_two_jobs_and_acks_independent_of_order() 
         second_future.set_result(_outcome(job_id="job-2", duration_seconds=2.0))
         first_future.set_result(_outcome(job_id="job-1", duration_seconds=1.0))
 
-    assert channel.basic_publish.call_count == 2
-    assert {call.kwargs["routing_key"] for call in channel.basic_publish.call_args_list} == {
-        "docrunr.results"
-    }
-    assert {call.kwargs["body"] for call in channel.basic_publish.call_args_list} == {
+    assert channel.basic_publish.call_count == 4
+    result_publishes = [
+        c
+        for c in channel.basic_publish.call_args_list
+        if c.kwargs["routing_key"] == "docrunr.results"
+    ]
+    assert {call.kwargs["body"] for call in result_publishes} == {
         b'{"job_id":"job-1","status":"ok","duration_seconds":1.0}',
         b'{"job_id":"job-2","status":"ok","duration_seconds":2.0}',
     }
@@ -359,12 +431,13 @@ def test_llm_followup_published_on_success_with_llm_profile() -> None:
         )
 
     publishes = channel.basic_publish.call_args_list
-    assert len(publishes) == 2
-    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
-    assert publishes[1].kwargs["routing_key"] == "docrunr.llm.jobs"
+    assert len(publishes) == 3
+    assert publishes[0].kwargs["routing_key"] == "docrunr.lifecycle"
+    assert publishes[1].kwargs["routing_key"] == "docrunr.results"
+    assert publishes[2].kwargs["routing_key"] == "docrunr.llm.jobs"
     import json
 
-    llm_body = json.loads(publishes[1].kwargs["body"])
+    llm_body = json.loads(publishes[2].kwargs["body"])
     assert llm_body["extract_job_id"] == "job-1"
     assert llm_body["llm_profile"] == "embed-local"
     assert llm_body["chunks_path"] == "output/2026/04/15/00/job-1.json"
@@ -395,8 +468,9 @@ def test_no_llm_followup_when_llm_profile_absent() -> None:
         )
 
     publishes = channel.basic_publish.call_args_list
-    assert len(publishes) == 1
-    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
+    assert len(publishes) == 2
+    assert publishes[0].kwargs["routing_key"] == "docrunr.lifecycle"
+    assert publishes[1].kwargs["routing_key"] == "docrunr.results"
     channel.basic_ack.assert_called_once_with(delivery_tag=51)
 
 
@@ -424,8 +498,9 @@ def test_no_llm_followup_when_extraction_fails() -> None:
         )
 
     publishes = channel.basic_publish.call_args_list
-    assert len(publishes) == 1
-    assert publishes[0].kwargs["routing_key"] == "docrunr.results"
+    assert len(publishes) == 2
+    assert publishes[0].kwargs["routing_key"] == "docrunr.lifecycle"
+    assert publishes[1].kwargs["routing_key"] == "docrunr.results"
     channel.basic_ack.assert_called_once_with(delivery_tag=52)
 
 

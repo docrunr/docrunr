@@ -17,7 +17,7 @@ Workflow (recommended):
 Behavior:
   - Must run on main branch
   - Requires clean working tree
-  - Updates version fields in workspace/core/worker/worker-llm/UI manifests
+  - Updates version fields in workspace/API/runtime/core/workers/UI manifests
   - Creates release commit `🚀 Release vX.Y.Z`
   - If --version is omitted in a terminal session, prompts for a version with the next patch as default
   - If --version is omitted non-interactively: first release is 0.0.1; otherwise patch-bump from latest vX.Y.Z
@@ -31,7 +31,9 @@ version=""
 push_tag=false
 release_files=(
   "pyproject.toml"
+  "api/pyproject.toml"
   "core/pyproject.toml"
+  "runtime/pyproject.toml"
   "worker/pyproject.toml"
   "worker-llm/pyproject.toml"
   "ui/package.json"

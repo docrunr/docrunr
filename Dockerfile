@@ -37,12 +37,15 @@ COPY pyproject.toml uv.lock ./
 
 # Install dependencies first (cache layer). Only the TXT worker graph — not worker-llm / litellm.
 COPY core/pyproject.toml ./core/
+COPY api/pyproject.toml ./api/
+COPY runtime/pyproject.toml ./runtime/
 COPY worker/pyproject.toml ./worker/
 COPY worker-llm/pyproject.toml ./worker-llm/
 RUN uv sync --frozen --no-dev --no-install-workspace --package docrunr-worker
 
 # Copy source and install core + worker (omit workspace root so LLM stays out)
 COPY core/src/ ./core/src/
+COPY runtime/src/ ./runtime/src/
 COPY worker/src/ ./worker/src/
 RUN uv sync --frozen --no-dev --package docrunr-worker
 
@@ -70,6 +73,7 @@ WORKDIR /app
 # Copy virtual environment and source from builder
 COPY --from=builder --chown=docrunr:docrunr /app/.venv /app/.venv
 COPY --from=builder --chown=docrunr:docrunr /app/core/src /app/core/src
+COPY --from=builder --chown=docrunr:docrunr /app/runtime/src /app/runtime/src
 COPY --from=builder --chown=docrunr:docrunr /app/worker/src /app/worker/src
 COPY --from=ui-builder --chown=docrunr:docrunr /app/ui/dist /app/worker/src/docrunr_worker/ui_dist
 

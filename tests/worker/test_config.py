@@ -17,6 +17,7 @@ class TestWorkerSettings:
         assert settings.rabbitmq_port == 5672
         assert settings.rabbitmq_queue == "docrunr.jobs"
         assert settings.rabbitmq_result_queue == "docrunr.results"
+        assert settings.rabbitmq_lifecycle_queue == ""
         assert settings.consumed_queues == ("docrunr.jobs",)
         assert settings.storage_type == StorageType.LOCAL
         assert settings.storage_base_path == "/data"

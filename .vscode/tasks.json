@@ -125,6 +125,47 @@
       "problemMatcher": []
     },
     {
+      "label": "api:dev",
+      "type": "shell",
+      "command": "uv run uvicorn docrunr_api.app:create_app --factory --reload --host 127.0.0.1 --port 8082",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "RABBITMQ_HOST": "localhost",
+          "STORAGE_BASE_PATH": "${workspaceFolder}/.data",
+          "API_DB_PATH": "${workspaceFolder}/.data/docrunr-api.sqlite",
+          "LITELLM_BASE_URL": "http://localhost:4000"
+        }
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test:api",
+      "type": "shell",
+      "command": "uv run pytest -q tests/runtime tests/api",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test:integration:api",
+      "type": "shell",
+      "command": "node ./scripts/test.mjs integration api",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
       "label": "docker:build",
       "type": "shell",
       "command": "node ./scripts/docker.mjs build '${input:dockerBuildTarget}'",
@@ -279,8 +320,8 @@
     {
       "id": "dockerBuildTarget",
       "type": "pickString",
-      "description": "Docker image(s) to build (default images both workers).",
-      "options": ["all", "txt", "llm"],
+      "description": "Docker image(s) to build (default images include API and both workers).",
+      "options": ["all", "txt", "llm", "api"],
       "default": "all"
     },
     {

@@ -16,7 +16,7 @@
   <img src="./assets/docrunr-intro.gif" alt="DocRunr dashboard: metrics, activity heatmap, and charts" />
 </p>
 
-DocRunr gives you two ways to run document processing: a CLI for local and batch work, and a Docker container with a UI for your RAG stack development and production deployments.
+DocRunr supports a CLI for local and batch work, queue workers with an operator UI, and a local HTTP API for application integrations.
 
 ### ✨ **Highlights**
 
@@ -25,6 +25,7 @@ DocRunr gives you two ways to run document processing: a CLI for local and batch
 - Automatic parser fallback when extraction quality is weak.
 - Worker setup with queue processing, uploads, health, stats, and artifact inspection.
 - UI for uploads, jobs, and output review.
+- Local public HTTP API (`/api/v1`) for application integrations.
 
 ### 🎯 **Simple by design**
 
@@ -36,7 +37,7 @@ Chunks are simple by design. We lean on the structure already in the document an
 
 ### 🔄 **How it works**
 
-DocRunr fits into one small part of your stack. Locally, you can run the CLI on files directly. In Docker or production, you push jobs to RabbitMQ and let the DocRunr worker do the extraction and chunking.
+DocRunr fits into one small part of your stack. Locally, you can run the CLI on files directly. In Docker or production, publish jobs to RabbitMQ (or upload via the local public API / worker UI) and let the TXT worker extract and chunk.
 
 ```mermaid
 flowchart LR
@@ -47,11 +48,11 @@ flowchart LR
     C --> E["🧩 Structured chunks (.json)"]
 ```
 
-The bundled UI sits on top of that same flow. It gives you an easy way to upload documents, inspect jobs, and review artifacts without building your own operator tooling first.
+The bundled UI sits on top of that same worker flow. The local public API is a separate gateway: it stores the upload, publishes the job, and projects results back over HTTP.
 
 ### 🐳 **Docker**
 
-The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
+The default Docker stack is RabbitMQ, the public API, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
 
 ```bash
 docker compose up -d --build
@@ -59,14 +60,34 @@ docker compose up -d --build
 
 - Open http://localhost:8080 for the text extraction (TXT) dashboard.
 - Open http://localhost:8081 for the LLM dashboard.
+- Open http://localhost:8082 for the public API Swagger interface.
 
-**Object storage:** Use the SeaweedFS overlay so both workers use S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
+**Workers only** (own/platform API consumes `docrunr.results` — omit the API overlay so it does not compete for those queues; lifecycle publish stays off):
 
 ```bash
-docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
+docker compose -f docker-compose.base.yml -f docker-compose.local.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml up -d --build
 ```
 
-**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
+Upload and poll entirely over HTTP:
+
+```bash
+job_id="$(
+  curl -sS -F file=@document.pdf http://127.0.0.1:8082/api/v1/documents |
+    python -c 'import json,sys; print(json.load(sys.stdin)["data"]["job_id"])'
+)"
+curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}"
+curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}/result?format=markdown"
+```
+
+Set `API_KEY` to require `Authorization: Bearer <key>`. Without a key, Compose publishes the API only on `127.0.0.1`. The local API has no cloud workspaces, roles, billing, or quotas. It exclusively consumes `docrunr.results`, `docrunr.llm.results`, and `docrunr.lifecycle`, and supports one SQLite-backed API replica. Details: [`SPEC.md`](./SPEC.md) (section 24).
+
+**Object storage:** Use the SeaweedFS overlay so the API and both workers share S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
+
+```bash
+docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.api.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
+```
+
+**LLM embeddings:** Pass `llm_profile` on the extraction job (API form field or RabbitMQ payload) to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
 
 <details>
 <summary>Queue payloads</summary>
@@ -139,12 +160,13 @@ LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artif
 
 </details>
 
-**Environment variables:** Text extraction and LLM workers are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, _Configuration_, and section 20 for the LLM worker).
+**Environment variables:** Workers and the local API are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, section 20 for the LLM worker, section 24 for the API).
 
 ### 🛠 **Tech stack**
 
 - **Core runtime:** Python
 - **Queue:** RabbitMQ
+- **API:** FastAPI (`docrunr-api`)
 - **UI:** React, Vite, Mantine
 - **Storage:** local disk or S3-compatible object storage
 - **Packaging:** Docker
@@ -166,10 +188,12 @@ pnpm -C ui install
 ```
 docrunr/
 ├── core/           # docrunr on PyPI (CLI + library)
+├── runtime/        # lightweight shared storage and messaging primitives
+├── api/            # docrunr-api public HTTP gateway
 ├── worker/         # docrunr-worker (RabbitMQ, HTTP, bundled UI assets)
 ├── worker-llm/     # docrunr-worker-llm (optional LLM post-processing)
 ├── ui/             # React + Mantine; Vite in dev, static bundle in the image
-├── tests/          # core, worker, worker_llm, integration, samples
+├── tests/          # core, runtime, API, workers, integration, samples
 └── scripts/        # release and dev helpers
 ```
 

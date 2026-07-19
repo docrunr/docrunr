@@ -25,6 +25,8 @@ class WorkerSettings(BaseSettings):
     rabbitmq_result_queue: str = "docrunr.results"
     rabbitmq_dlq_queue: str = "docrunr.dlq"
     rabbitmq_llm_queue: str = "docrunr.llm.jobs"
+    # Optional API lifecycle projection; disabled unless an API gateway is deployed.
+    rabbitmq_lifecycle_queue: str = ""
     #: TCP/AMQP handshake timeout for ``/api/overview`` broker liveness (seconds).
     rabbitmq_health_probe_timeout_seconds: float = Field(default=2.0, ge=0.5, le=30.0)
     #: Reuse probe result; default > UI poll interval (4s) so steady-state polls hit cache.

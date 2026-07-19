@@ -12,6 +12,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
 const WORKER_HEALTH_URL = 'http://127.0.0.1:8080/health';
 const WORKER_LLM_HEALTH_URL = 'http://127.0.0.1:8081/health';
+const API_HEALTH_URL = 'http://127.0.0.1:8082/health';
 const LITELLM_HEALTH_URL = 'http://127.0.0.1:4000/health/liveliness';
 const UI_HOST = '127.0.0.1';
 const UI_PORT = 5173;
@@ -45,15 +46,22 @@ async function main() {
         env: await buildWorkerLlmEnv(),
       })
     : null;
+  const api = startProcess('api', 'uv', ['run', 'docrunr-api'], {
+    env: await buildApiEnv(),
+  });
 
   try {
-    const healthWaits = [waitForHttp(WORKER_HEALTH_URL, 90_000, 'worker API')];
+    const healthWaits = [
+      waitForHttp(WORKER_HEALTH_URL, 90_000, 'worker API'),
+      waitForHttp(API_HEALTH_URL, 90_000, 'public API'),
+    ];
     if (workerLlm) {
       healthWaits.push(waitForHttp(WORKER_LLM_HEALTH_URL, 90_000, 'worker-llm API'));
     }
     await Promise.all(healthWaits);
   } catch (error) {
     stopProcess(worker.child);
+    stopProcess(api.child);
     if (workerLlm) stopProcess(workerLlm.child);
     throw error;
   }
@@ -82,6 +90,7 @@ async function main() {
   /** @type {Promise<{name: string, code: number}>[]} */
   const exits = [
     worker.exit.then((code) => ({ name: 'worker', code })),
+    api.exit.then((code) => ({ name: 'api', code })),
     ui.exit.then((code) => ({ name: 'ui', code })),
   ];
   if (workerLlm) {
@@ -91,6 +100,7 @@ async function main() {
   const first = await Promise.race(exits);
 
   if (first.name !== 'worker') stopProcess(worker.child);
+  if (first.name !== 'api') stopProcess(api.child);
   if (first.name !== 'ui') stopProcess(ui.child);
   if (workerLlm && first.name !== 'worker-llm') stopProcess(workerLlm.child);
 
@@ -99,7 +109,7 @@ async function main() {
 
 function printHelp() {
   console.log('Usage: node ./scripts/dev.mjs [--no-llm]');
-  console.log('Starts RabbitMQ, worker, worker-llm, LiteLLM, and UI.');
+  console.log('Starts RabbitMQ, API, worker, worker-llm, LiteLLM, and UI.');
   console.log('Expects Ollama running on the host (brew services).');
   console.log();
   console.log('Options:');
@@ -135,6 +145,22 @@ async function buildWorkerLlmEnv() {
     SQLITE_BASE_PATH: dataRoot,
     LITELLM_BASE_URL: 'http://localhost:4000',
     HEALTH_PORT: '8081',
+  };
+}
+
+async function buildApiEnv() {
+  const fromEnvFile = await loadDotEnv(path.join(REPO_ROOT, '.env'));
+  const dataRoot = path.join(REPO_ROOT, '.data');
+  await mkdir(dataRoot, { recursive: true });
+  return {
+    ...process.env,
+    ...fromEnvFile,
+    API_HOST: '127.0.0.1',
+    API_PORT: '8082',
+    API_DB_PATH: path.join(dataRoot, 'docrunr-api.sqlite'),
+    RABBITMQ_HOST: 'localhost',
+    STORAGE_BASE_PATH: dataRoot,
+    LITELLM_BASE_URL: LLM_MODE ? 'http://localhost:4000' : '',
   };
 }
 
