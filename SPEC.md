@@ -446,10 +446,12 @@ docrunr/
 │
 ├── Dockerfile                     # Single image for CLI + worker
 ├── Dockerfile.llm                 # LLM worker image
-├── docker-compose.yml             # Includes base + local + LLM + Ollama (TXT host HEALTH_PORT; LLM host LLM_HEALTH_PORT→8080)
+├── Dockerfile.api                 # Local public API image
+├── docker-compose.yml             # Includes base + local + LLM + API + Ollama
 ├── docker-compose.base.yml        # Worker + RabbitMQ core stack
 ├── docker-compose.local.yml       # Local bind mounts and dev-oriented defaults
-├── docker-compose.seaweedfs.yml   # SeaweedFS S3 storage overlay
+├── docker-compose.api.yml         # Local public API gateway overlay
+├── docker-compose.seaweedfs.yml   # SeaweedFS S3 storage overlay (API + workers)
 ├── docker-compose.llm.yml         # LiteLLM proxy + worker-llm overlay
 ├── docker-compose.ollama.yml      # Ollama in Docker (when not on host)
 ├── litellm.yaml                   # LiteLLM proxy model config
@@ -459,7 +461,7 @@ docrunr/
 └── assets/                        # Optional repo-level branding (often empty; UI assets live under ui/src/assets/)
 ```
 
-Three Python packages in one uv workspace, plus the web UI. One repo. Responsibilities stay scoped to their package; internal file layout is an implementation detail.
+Python packages in one uv workspace (`core`, `runtime`, `api`, `worker`, `worker-llm`), plus the web UI. One repo. Responsibilities stay scoped to their package; internal file layout is an implementation detail.
 
 ---
 
@@ -481,7 +483,7 @@ It is not a framework. It has no plugin system. It does ship with a bundled oper
 
 **Reliability.** Manual acknowledgment — extraction messages are acked only after a result is successfully published. If a worker crashes mid-job, RabbitMQ redelivers the message to another worker. Per-job timeouts via `JOB_TIMEOUT_SECONDS` prevent stuck jobs.
 
-**Integration.** RabbitMQ remains the main queue integration point, and the worker also exposes a minimal HTTP surface for health, stats, uploads, job history, and artifact access. Web apps can publish jobs directly to RabbitMQ or use the upload endpoint/UI as a thin convenience layer.
+**Integration.** RabbitMQ remains the main queue integration point, and the worker also exposes a minimal HTTP surface for health, stats, uploads, job history, and artifact access. Web apps can publish jobs directly to RabbitMQ, use the worker upload endpoint/UI, or call the local public API (`docrunr-api`, section 24).
 
 ---
 
@@ -490,14 +492,17 @@ It is not a framework. It has no plugin system. It does ship with a bundled oper
 ### Queues
 
 
-| Queue             | Direction         | Purpose                                      |
-| ----------------- | ----------------- | -------------------------------------------- |
-| `docrunr.jobs`    | Web app → Worker  | Job requests                                 |
-| `docrunr.results` | Worker → Web app  | Processing results                           |
-| `docrunr.dlq`     | Worker → Operator | Dead-lettered messages after bounded retries |
+| Queue               | Direction              | Purpose                                                                 |
+| ------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| `docrunr.jobs`      | Publisher → Worker     | Job requests (web app, worker upload UI, or `docrunr-api`)              |
+| `docrunr.results`   | Worker → Consumer      | Processing results                                                      |
+| `docrunr.lifecycle` | Worker → API           | Optional `processing` transition when `RABBITMQ_LIFECYCLE_QUEUE` is set |
+| `docrunr.dlq`       | Worker → Operator      | Dead-lettered messages after bounded retries                            |
 
 
-All queues are durable. Messages use `delivery_mode=2` (persistent). The `docrunr.jobs` queue is a **priority queue**: declare it with `arguments: {"x-max-priority": 255}` and set AMQP `BasicProperties.priority` on published jobs to match the JSON payload (see below). `docrunr.results` and `docrunr.dlq` are standard queues without priority arguments.
+All queues are durable. Messages use `delivery_mode=2` (persistent). The `docrunr.jobs` queue is a **priority queue**: declare it with `arguments: {"x-max-priority": 255}` and set AMQP `BasicProperties.priority` on published jobs to match the JSON payload (see below). `docrunr.results`, `docrunr.lifecycle`, and `docrunr.dlq` are standard queues without priority arguments.
+
+When `docrunr-api` is deployed, it is the exclusive consumer of `docrunr.results` (and of `docrunr.llm.results` / `docrunr.lifecycle`). Direct RabbitMQ consumers of those result queues must not run alongside the API.
 
 ### Job Message
 
@@ -559,6 +564,20 @@ Consumers must be prepared for duplicate messages and duplicate processing. Hand
 
 **Malformed job messages.** Payloads that fail validation never appear on the result queue with a client-supplied `job_id`; the worker assigns a synthetic id that includes a per-delivery suffix so identical invalid bytes on separate deliveries show up as separate rows in `/api/jobs` history.
 
+### Lifecycle Message
+
+When `RABBITMQ_LIFECYCLE_QUEUE` is non-empty (Compose API overlay sets `docrunr.lifecycle`), the TXT worker publishes once as it accepts a job:
+
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "state": "processing",
+  "occurred_at": "2026-03-21T14:22:00+00:00"
+}
+```
+
+Without an API gateway this queue stays unset so no orphan lifecycle queue is declared.
+
 ---
 
 ## 20. LLM Worker (Optional)
@@ -583,11 +602,11 @@ LiteLLM proxy config lives in `litellm.yaml` at the repo root.
 ### Queues
 
 
-| Queue                 | Direction               | Purpose                |
-| --------------------- | ----------------------- | ---------------------- |
-| `docrunr.llm.jobs`    | Extraction → worker-llm | LLM job intake         |
-| `docrunr.llm.results` | worker-llm → Web app    | LLM job outcomes       |
-| `docrunr.llm.dlq`     | worker-llm → Operator   | Dead-lettered failures |
+| Queue                 | Direction                | Purpose                |
+| --------------------- | ------------------------ | ---------------------- |
+| `docrunr.llm.jobs`    | Extraction → worker-llm  | LLM job intake         |
+| `docrunr.llm.results` | worker-llm → Consumer    | LLM job outcomes       |
+| `docrunr.llm.dlq`     | worker-llm → Operator    | Dead-lettered failures |
 
 
 All queues are durable with `delivery_mode=2`. Same retry and dead-letter semantics as the extraction worker.
@@ -652,7 +671,7 @@ All RabbitMQ and storage variables from the extraction worker are also supported
 
 ## 21. Shared Storage
 
-The worker and web app communicate files through shared storage. Two backends are supported:
+The workers, local public API, and web app communicate files through shared storage. Two backends are supported:
 
 
 | Backend | Use case                     | Configuration                                   |
@@ -683,7 +702,7 @@ Files use **time-partitioned, UUID-named paths** to prevent collisions and keep 
                     └── a1b2c3d4-...-.json
 ```
 
-- **Web app** generates a UUID, stores the uploaded file at `input/YYYY/MM/DD/HH/<uuid>.<ext>` (UTC).
+- **Publisher** (web app, worker upload UI, or `docrunr-api`) generates a UUID and stores the upload at `input/YYYY/MM/DD/HH/<uuid>.<ext>` (UTC).
 - **Worker** writes output to `output/YYYY/MM/DD/HH/<uuid>.md` and `output/YYYY/MM/DD/HH/<uuid>.json`.
 - **Original filenames** are never stored on disk. They exist only in message metadata.
 - The `YYYY/MM/DD/HH/` prefix keeps directories from growing unbounded and simplifies cleanup/archival. Older objects may still use a shallower `YYYY/MM/...` layout; the worker accepts both.
@@ -701,9 +720,10 @@ All worker settings are environment variables. No config files. No CLI flags.
 | `RABBITMQ_PORT`         | `5672`            | RabbitMQ port                                                                                                                                         |
 | `RABBITMQ_USER`         | `guest`           | RabbitMQ username                                                                                                                                     |
 | `RABBITMQ_PASSWORD`     | `guest`           | RabbitMQ password                                                                                                                                     |
-| `RABBITMQ_QUEUE`        | `docrunr.jobs`    | Input job queue name                                                                                                                                  |
-| `RABBITMQ_RESULT_QUEUE` | `docrunr.results` | Result queue name                                                                                                                                     |
-| `RABBITMQ_DLQ_QUEUE`    | `docrunr.dlq`     | Dead-letter queue name for messages that fail after bounded retries                                                                                   |
+| `RABBITMQ_QUEUE`           | `docrunr.jobs`    | Input job queue name                                                                                                                                  |
+| `RABBITMQ_RESULT_QUEUE`    | `docrunr.results` | Result queue name                                                                                                                                     |
+| `RABBITMQ_DLQ_QUEUE`       | `docrunr.dlq`     | Dead-letter queue name for messages that fail after bounded retries                                                                                   |
+| `RABBITMQ_LIFECYCLE_QUEUE` | *(empty)*         | Optional lifecycle queue; Compose API overlay sets `docrunr.lifecycle`                                                                                |
 | `STORAGE_TYPE`          | `local`           | Storage backend: `local` or `s3`                                                                                                                      |
 | `STORAGE_BASE_PATH`     | `/data`           | Base path for local storage                                                                                                                           |
 | `S3_ENDPOINT`           | `http://seaweedfs:8333` | S3 endpoint URL (SeaweedFS, AWS S3, R2, MinIO, ...)                                                                                              |
@@ -774,32 +794,58 @@ survives worker restarts.
 
 The health server uses Python's stdlib `http.server`. No framework. No external dependency.
 
-### Local public API
+---
 
-The optional `docrunr-api` service is a separate FastAPI gateway on container port 8080
-(Compose host port 8082). Swagger is served at `/`, the generated contract at `/openapi.json`,
-and the cloud-compatible surface at `/api/v1`:
+## 24. Local Public API
 
-- `POST /api/v1/documents`
-- `GET /api/v1/jobs`
-- `GET /api/v1/jobs/{jobId}`
-- `GET /api/v1/jobs/{jobId}/result`
-- `GET /api/v1/llm/profiles`
+`docrunr-api` is a FastAPI gateway for application integrations. Container port **8080** (Compose host port **8082** via `DOCRUNR_API_PORT`). Swagger at `/`, OpenAPI at `/openapi.json`, cloud-compatible surface at `/api/v1`.
 
-The API writes uploads to shared local/S3 storage, publishes extraction jobs, and exclusively
-consumes `docrunr.results` and `docrunr.llm.results`. A `docrunr.lifecycle` event emitted when
-the TXT worker accepts a job provides the `processing` transition. The API persists its public
-projection and transactional publish outbox in `/db/docrunr-api.sqlite`; deliveries and
-projection updates are idempotent.
+### Endpoints
 
-The local deployment has no workspace, billing, role, or quota concepts. `API_KEY` enables a
-single static Bearer token. Without it, the default Compose port is bound only to `127.0.0.1`.
-SQLite mode supports one API replica; horizontally scaled API deployments require a shared
-database implementation.
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `POST` | `/api/v1/documents` | Multipart upload (`file`); optional form `llm_profile` |
+| `GET` | `/api/v1/jobs` | List jobs (`limit`, `offset`, `state`) |
+| `GET` | `/api/v1/jobs/{jobId}` | Job projection |
+| `GET` | `/api/v1/jobs/{jobId}/result` | Artifact download (`format`: `json`, `markdown`, or `embeddings`) |
+| `GET` | `/api/v1/llm/profiles` | LiteLLM profile names |
+| `GET` | `/health` | Liveness (`rabbitmq` ready flag) |
+
+Public job states: `queued` → `processing` → `succeeded` / `failed`. Result endpoints return `409 JOB_NOT_READY` until the matching artifact path is projected.
+
+### Flow
+
+1. Validate upload (and optional `llm_profile` against LiteLLM).
+2. Write the file to shared storage (`input/…`).
+3. Insert the job and a transactional outbox row in SQLite (`queued`).
+4. Publish to `docrunr.jobs`; HTTP waits until the outbox marks published.
+5. TXT worker emits `docrunr.lifecycle` (`processing`), then `docrunr.results`.
+6. When `llm_profile` is set, the TXT worker publishes `docrunr.llm.jobs`; LLM results arrive on `docrunr.llm.results`.
+7. Clients poll `GET /api/v1/jobs/{jobId}` and download via `…/result`.
+
+The API is the exclusive consumer of `docrunr.results`, `docrunr.llm.results`, and `docrunr.lifecycle`. Projection and outbox live in `/db/docrunr-api.sqlite`; updates are idempotent. No workspace, billing, role, or quota concepts. `API_KEY` enables a single static Bearer token; without it Compose binds only `127.0.0.1`. One SQLite-backed replica; horizontal scale needs a shared database.
+
+### Configuration
+
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `API_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` in Compose) |
+| `API_PORT` | `8080` | Container listen port |
+| `DOCRUNR_API_PORT` | `8082` | Compose host port |
+| `API_KEY` | *(empty)* | Optional Bearer token |
+| `API_ALLOW_UNAUTHENTICATED_PUBLIC` | `false` | Required for public bind without `API_KEY` (Compose sets `true`) |
+| `API_DB_PATH` | `/db/docrunr-api.sqlite` | Job projection + outbox |
+| `API_MAX_UPLOAD_BYTES` | `104857600` | Upload size limit |
+| `RABBITMQ_LIFECYCLE_QUEUE` | `docrunr.lifecycle` | Lifecycle consume queue (API default) |
+| `LITELLM_BASE_URL` | *(empty)* | Profiles lookup; Compose sets `http://litellm:4000` |
+| `LITELLM_PROFILES_CACHE_SECONDS` | `30` | Profile list cache TTL |
+
+RabbitMQ and storage variables match the workers (section 22).
 
 ---
 
-## 24. Future Considerations
+## 25. Future Considerations
 
 These may be added later. They must not increase CLI complexity.
 
@@ -813,13 +859,13 @@ These may be added later. They must not increase CLI complexity.
 
 ---
 
-## 25. Success Criteria
+## 26. Success Criteria
 
 DocRunr succeeds when:
 
 A developer runs `docrunr file.pdf` and gets clean, usable Markdown and chunks — without reading docs, without configuring anything, without debugging extraction failures.
 
-A web app developer runs `docker compose up`, publishes a job to RabbitMQ, and gets processed results back — without writing document parsing code, without managing extraction dependencies, without building a custom worker.
+A web app developer runs `docker compose up`, publishes a job to RabbitMQ (or uploads via the local public API), and gets processed results back — without writing document parsing code, without managing extraction dependencies, without building a custom worker.
 
 The tool should eliminate the need for custom document ingestion scripts in RAG pipelines.
 

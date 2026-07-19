@@ -1,4 +1,4 @@
-# Local public API gateway. The API consumes both worker result queues.
+# Local public API gateway. Consumes result + lifecycle queues; enables worker lifecycle publish.
 services:
   worker:
     environment:

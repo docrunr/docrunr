@@ -25,6 +25,7 @@ DocRunr supports a CLI for local and batch work, queue workers with an operator 
 - Automatic parser fallback when extraction quality is weak.
 - Worker setup with queue processing, uploads, health, stats, and artifact inspection.
 - UI for uploads, jobs, and output review.
+- Local public HTTP API (`/api/v1`) for application integrations.
 
 ### 🎯 **Simple by design**
 
@@ -36,7 +37,7 @@ Chunks are simple by design. We lean on the structure already in the document an
 
 ### 🔄 **How it works**
 
-DocRunr fits into one small part of your stack. Locally, you can run the CLI on files directly. In Docker or production, you push jobs to RabbitMQ and let the DocRunr worker do the extraction and chunking.
+DocRunr fits into one small part of your stack. Locally, you can run the CLI on files directly. In Docker or production, publish jobs to RabbitMQ (or upload via the local public API / worker UI) and let the TXT worker extract and chunk.
 
 ```mermaid
 flowchart LR
@@ -47,7 +48,7 @@ flowchart LR
     C --> E["🧩 Structured chunks (.json)"]
 ```
 
-The bundled UI sits on top of that same flow. It gives you an easy way to upload documents, inspect jobs, and review artifacts without building your own operator tooling first.
+The bundled UI sits on top of that same worker flow. The local public API is a separate gateway: it stores the upload, publishes the job, and projects results back over HTTP.
 
 ### 🐳 **Docker**
 
@@ -72,15 +73,15 @@ curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}"
 curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}/result?format=markdown"
 ```
 
-Set `API_KEY` to require `Authorization: Bearer <key>`. Without a key, Compose publishes the API only on `127.0.0.1`. The local API deliberately has no cloud workspaces, roles, billing, or quotas. It owns the `docrunr.results` and `docrunr.llm.results` consumers and supports one SQLite-backed API replica.
+Set `API_KEY` to require `Authorization: Bearer <key>`. Without a key, Compose publishes the API only on `127.0.0.1`. The local API has no cloud workspaces, roles, billing, or quotas. It exclusively consumes `docrunr.results`, `docrunr.llm.results`, and `docrunr.lifecycle`, and supports one SQLite-backed API replica. Details: [`SPEC.md`](./SPEC.md) (section 24).
 
-**Object storage:** Use the SeaweedFS overlay so both workers use S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
+**Object storage:** Use the SeaweedFS overlay so the API and both workers share S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
 
 ```bash
 docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.api.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
 ```
 
-**LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
+**LLM embeddings:** Pass `llm_profile` on the extraction job (API form field or RabbitMQ payload) to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
 
 <details>
 <summary>Queue payloads</summary>
@@ -153,12 +154,13 @@ LLM result (`docrunr.llm.results`): `status` `ok` or `error`; on success, `artif
 
 </details>
 
-**Environment variables:** Text extraction and LLM workers are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, _Configuration_, and section 20 for the LLM worker).
+**Environment variables:** Workers and the local API are configured only via env vars; tables and defaults are in [`SPEC.md`](./SPEC.md) (section 22, section 20 for the LLM worker, section 24 for the API).
 
 ### 🛠 **Tech stack**
 
 - **Core runtime:** Python
 - **Queue:** RabbitMQ
+- **API:** FastAPI (`docrunr-api`)
 - **UI:** React, Vite, Mantine
 - **Storage:** local disk or S3-compatible object storage
 - **Packaging:** Docker
