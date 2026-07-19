@@ -158,7 +158,7 @@
     {
       "label": "test:integration:api",
       "type": "shell",
-      "command": "uv run pytest -q -m integration tests/integration/test_public_api_e2e.py",
+      "command": "node ./scripts/test.mjs integration api",
       "options": {
         "cwd": "${workspaceFolder}"
       },

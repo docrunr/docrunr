@@ -16,7 +16,7 @@
   <img src="./assets/docrunr-intro.gif" alt="DocRunr dashboard: metrics, activity heatmap, and charts" />
 </p>
 
-DocRunr gives you two ways to run document processing: a CLI for local and batch work, and a Docker container with a UI for your RAG stack development and production deployments.
+DocRunr supports a CLI for local and batch work, queue workers with an operator UI, and a local HTTP API for application integrations.
 
 ### ✨ **Highlights**
 
@@ -51,7 +51,7 @@ The bundled UI sits on top of that same flow. It gives you an easy way to upload
 
 ### 🐳 **Docker**
 
-The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
+The default Docker stack is RabbitMQ, the public API, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
 
 ```bash
 docker compose up -d --build
@@ -59,11 +59,25 @@ docker compose up -d --build
 
 - Open http://localhost:8080 for the text extraction (TXT) dashboard.
 - Open http://localhost:8081 for the LLM dashboard.
+- Open http://localhost:8082 for the public API Swagger interface.
+
+Upload and poll entirely over HTTP:
+
+```bash
+job_id="$(
+  curl -sS -F file=@document.pdf http://127.0.0.1:8082/api/v1/documents |
+    python -c 'import json,sys; print(json.load(sys.stdin)["data"]["job_id"])'
+)"
+curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}"
+curl -sS "http://127.0.0.1:8082/api/v1/jobs/${job_id}/result?format=markdown"
+```
+
+Set `API_KEY` to require `Authorization: Bearer <key>`. Without a key, Compose publishes the API only on `127.0.0.1`. The local API deliberately has no cloud workspaces, roles, billing, or quotas. It owns the `docrunr.results` and `docrunr.llm.results` consumers and supports one SQLite-backed API replica.
 
 **Object storage:** Use the SeaweedFS overlay so both workers use S3-compatible storage (list it last so it overrides `STORAGE_TYPE`):
 
 ```bash
-docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
+docker compose -f docker-compose.base.yml -f docker-compose.llm.yml -f docker-compose.api.yml -f docker-compose.ollama.yml -f docker-compose.seaweedfs.yml up -d --build
 ```
 
 **LLM embeddings:** Pass `llm_profile` on extraction jobs to trigger a follow-up embedding step. See [`SPEC.md`](./SPEC.md) (section 20) for the full protocol.
@@ -166,10 +180,12 @@ pnpm -C ui install
 ```
 docrunr/
 ├── core/           # docrunr on PyPI (CLI + library)
+├── runtime/        # lightweight shared storage and messaging primitives
+├── api/            # docrunr-api public HTTP gateway
 ├── worker/         # docrunr-worker (RabbitMQ, HTTP, bundled UI assets)
 ├── worker-llm/     # docrunr-worker-llm (optional LLM post-processing)
 ├── ui/             # React + Mantine; Vite in dev, static bundle in the image
-├── tests/          # core, worker, worker_llm, integration, samples
+├── tests/          # core, runtime, API, workers, integration, samples
 └── scripts/        # release and dev helpers
 ```
 

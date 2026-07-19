@@ -114,7 +114,11 @@ class Consumer:
                 self._channel.queue_declare(queue=queue_name, durable=True)
         self._channel.queue_declare(queue=self._settings.rabbitmq_result_queue, durable=True)
         self._channel.queue_declare(queue=self._settings.rabbitmq_dlq_queue, durable=True)
-        self._channel.queue_declare(queue=self._settings.rabbitmq_lifecycle_queue, durable=True)
+        if self._settings.rabbitmq_lifecycle_queue:
+            self._channel.queue_declare(
+                queue=self._settings.rabbitmq_lifecycle_queue,
+                durable=True,
+            )
         self._channel.basic_qos(prefetch_count=self._settings.worker_concurrency)
 
         stats.rabbitmq_connected = True
@@ -281,18 +285,19 @@ class Consumer:
         delivery_id: str,
     ) -> None:
         req = parse_job_request_from_body(body, delivery_id=delivery_id)
-        self._publish_json(
-            channel=channel,
-            queue_name=self._settings.rabbitmq_lifecycle_queue,
-            payload_json=json.dumps(
-                {
-                    "job_id": req.job_id,
-                    "state": PROCESSING,
-                    "occurred_at": datetime.now(UTC).isoformat(),
-                },
-                separators=(",", ":"),
-            ),
-        )
+        if self._settings.rabbitmq_lifecycle_queue:
+            self._publish_json(
+                channel=channel,
+                queue_name=self._settings.rabbitmq_lifecycle_queue,
+                payload_json=json.dumps(
+                    {
+                        "job_id": req.job_id,
+                        "state": PROCESSING,
+                        "occurred_at": datetime.now(UTC).isoformat(),
+                    },
+                    separators=(",", ":"),
+                ),
+            )
         try:
             stats.record_job(
                 {
@@ -454,7 +459,18 @@ class Consumer:
         body: bytes,
     ) -> None:
         delivery_id = uuid.uuid4().hex
-        self._persist_processing(channel, body, delivery_id=delivery_id)
+        try:
+            self._persist_processing(channel, body, delivery_id=delivery_id)
+        except Exception as exc:
+            self._handle_processing_exception(
+                queue_name,
+                channel,
+                method,
+                body,
+                exc,
+                delivery_id=delivery_id,
+            )
+            return
         if self._settings.worker_concurrency <= 1:
             try:
                 outcome = handle_extract_job(

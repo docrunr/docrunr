@@ -1,5 +1,9 @@
 # Local public API gateway. The API consumes both worker result queues.
 services:
+  worker:
+    environment:
+      RABBITMQ_LIFECYCLE_QUEUE: ${RABBITMQ_LIFECYCLE_QUEUE:-docrunr.lifecycle}
+
   api:
     image: ${DOCRUNR_API_IMAGE:-docrunr-api:latest}
     build:

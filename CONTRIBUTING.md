@@ -13,7 +13,10 @@ This guide keeps contributions simple, consistent, and easy to review.
 ## Repository structure
 
 - **`core/`** — `docrunr` (CLI + library, PyPI).
-- **`worker/`** — `docrunr-worker` (RabbitMQ, storage, HTTP; PyPI + Docker entrypoint).
+- **`runtime/`** — internal shared storage and messaging library.
+- **`api/`** — `docrunr-api` HTTP gateway and generated OpenAPI contract.
+- **`worker/`** — `docrunr-worker` (RabbitMQ, storage, HTTP, Docker entrypoint).
+- **`worker-llm/`** — optional embedding worker.
 - **`ui/`** — React/Mantine app; `pnpm -C ui dev` proxies API routes to the worker on port 8080.
 - **`tests/`** — `core`, `worker`, `integration` (needs services), `samples`.
 
@@ -65,7 +68,7 @@ Examples:
 - Use VS Code task `release` (or `./scripts/release.sh`) on `main` to create/push tags.
 - Publishing on release tags:
   - PyPI: `docrunr` (CLI/library)
-  - Docker: worker image (multi-arch `amd64` + `arm64`)
+  - Docker: TXT worker, LLM worker, and API images (multi-arch `amd64` + `arm64`)
 
 ## Reporting Bugs and Suggesting Features
 

@@ -6,13 +6,13 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
 
 class StorageSettings(Protocol):
-    storage_type: object
+    storage_type: Any
     storage_base_path: str
     s3_endpoint: str
     s3_access_key: str

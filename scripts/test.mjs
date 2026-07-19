@@ -5,7 +5,7 @@
  * Usage:
  *   node ./scripts/test.mjs unit [pytest -k filter]
  *   node ./scripts/test.mjs samples <includeGlob>
- *   node ./scripts/test.mjs integration <txt|s3|llm> [sampleSource] [sampleCount]
+ *   node ./scripts/test.mjs integration <txt|s3|llm|api> [sampleSource] [sampleCount]
  *
  * Integration modes: ``txt`` runs ``tests/integration`` excluding ``llm_jobs`` (no ``llm_profile`` queue tests).
  * ``s3`` runs the full integration directory (TXT + LLM e2e). ``llm`` runs only ``test_llm_jobs_e2e.py``.
@@ -60,8 +60,8 @@ function printHelp() {
   console.log(`Usage:
   node ./scripts/test.mjs unit [filter]     filter is passed to pytest -k (default: run all)
   node ./scripts/test.mjs samples <include>
-  node ./scripts/test.mjs integration <txt|s3|llm> [sampleSource] [sampleCount]
-    txt: integration minus llm_jobs | s3: full integration | llm: LLM e2e only
+  node ./scripts/test.mjs integration <txt|s3|llm|api> [sampleSource] [sampleCount]
+    txt: integration minus llm_jobs | s3: full | llm: LLM only | api: public API only
 `);
 }
 
@@ -81,7 +81,15 @@ function runUv(args, env) {
 }
 
 async function cmdUnit(filter) {
-  const pytestArgs = ['pytest', 'tests/core/', 'tests/worker/', 'tests/worker_llm/', '-v'];
+  const pytestArgs = [
+    'pytest',
+    'tests/api/',
+    'tests/core/',
+    'tests/runtime/',
+    'tests/worker/',
+    'tests/worker_llm/',
+    '-v',
+  ];
   if (filter && filter !== '*') {
     pytestArgs.push('-k', filter);
   }
@@ -101,7 +109,7 @@ function cmdSamples(include) {
 }
 
 /**
- * @param {'txt' | 's3' | 'llm'} mode
+ * @param {'txt' | 's3' | 'llm' | 'api'} mode
  * @param {string} [sampleSource]
  * @param {string} [sampleCount]
  */
@@ -134,8 +142,11 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
         '[test:integration:llm] profile pool: live LiteLLM /models list (random per document)',
       );
     }
+  } else if (mode === 'api') {
+    env.DOCRUNR_INTEGRATION_STORAGE = 'local';
+    env.DOCRUNR_API_URL = `http://127.0.0.1:${env.DOCRUNR_API_PORT || '8082'}`;
   } else {
-    console.error(`Unknown integration mode: ${mode} (use txt, s3, or llm)`);
+    console.error(`Unknown integration mode: ${mode} (use txt, s3, llm, or api)`);
     process.exit(1);
   }
 
@@ -147,6 +158,8 @@ async function cmdIntegration(mode, sampleSource, sampleCount) {
   let pytestArgs;
   if (mode === 'llm') {
     pytestArgs = ['pytest', 'tests/integration/test_llm_jobs_e2e.py', '-v', '-s'];
+  } else if (mode === 'api') {
+    pytestArgs = ['pytest', 'tests/integration/test_public_api_e2e.py', '-v', '-s'];
   } else if (mode === 'txt') {
     pytestArgs = ['pytest', 'tests/integration', '-v', '-m', 'not llm_jobs'];
   } else {
@@ -188,11 +201,11 @@ async function main() {
   if (command === 'integration') {
     const [mode, sampleSource = 'samples', sampleCount = '5'] = rest;
     if (!mode) {
-      console.error('integration requires a mode: txt, s3, or llm');
+      console.error('integration requires a mode: txt, s3, llm, or api');
       process.exit(1);
     }
     await cmdIntegration(
-      /** @type {'txt' | 's3' | 'llm'} */ (mode),
+      /** @type {'txt' | 's3' | 'llm' | 'api'} */ (mode),
       sampleSource,
       sampleCount,
     );

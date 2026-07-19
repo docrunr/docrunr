@@ -396,7 +396,7 @@ The layout is **package- and directory-oriented**. Individual Python modules may
 
 ```
 docrunr/
-├── pyproject.toml                 # uv workspace root (wires core + worker)
+├── pyproject.toml                 # uv workspace root
 ├── uv.lock
 │
 ├── core/                          # CLI + library package (`docrunr` on PyPI paths)
@@ -404,6 +404,11 @@ docrunr/
 │   └── src/docrunr/               # Public API, CLI, pipeline (detect → parse → clean → chunk)
 │       ├── parsers/               # Format parsers, registry, shared converter helpers
 │       └── py.typed
+│
+├── runtime/                       # Shared lightweight storage and messaging primitives
+│
+├── api/                           # Local public HTTP API (`docrunr-api`)
+│   └── src/docrunr_api/           # OpenAPI routes, SQLite projection, outbox, result consumers
 │
 ├── worker/                        # RabbitMQ worker package (`docrunr_worker`)
 │   ├── pyproject.toml
@@ -428,6 +433,8 @@ docrunr/
 │
 ├── tests/
 │   ├── core/                      # Unit tests for docrunr
+│   ├── runtime/                   # Shared runtime contract tests
+│   ├── api/                       # Public API and OpenAPI contract tests
 │   ├── worker/                    # Unit tests for docrunr_worker
 │   ├── worker_llm/                # Unit tests for docrunr_worker_llm
 │   ├── integration/               # Opt-in tests (RabbitMQ, storage, upload E2E)
@@ -766,6 +773,29 @@ Job history and aggregate UI stats are persisted in SQLite under
 survives worker restarts.
 
 The health server uses Python's stdlib `http.server`. No framework. No external dependency.
+
+### Local public API
+
+The optional `docrunr-api` service is a separate FastAPI gateway on container port 8080
+(Compose host port 8082). Swagger is served at `/`, the generated contract at `/openapi.json`,
+and the cloud-compatible surface at `/api/v1`:
+
+- `POST /api/v1/documents`
+- `GET /api/v1/jobs`
+- `GET /api/v1/jobs/{jobId}`
+- `GET /api/v1/jobs/{jobId}/result`
+- `GET /api/v1/llm/profiles`
+
+The API writes uploads to shared local/S3 storage, publishes extraction jobs, and exclusively
+consumes `docrunr.results` and `docrunr.llm.results`. A `docrunr.lifecycle` event emitted when
+the TXT worker accepts a job provides the `processing` transition. The API persists its public
+projection and transactional publish outbox in `/db/docrunr-api.sqlite`; deliveries and
+projection updates are idempotent.
+
+The local deployment has no workspace, billing, role, or quota concepts. `API_KEY` enables a
+single static Bearer token. Without it, the default Compose port is bound only to `127.0.0.1`.
+SQLite mode supports one API replica; horizontally scaled API deployments require a shared
+database implementation.
 
 ---
 

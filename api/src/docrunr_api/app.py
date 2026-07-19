@@ -5,15 +5,10 @@ from __future__ import annotations
 import json
 import secrets
 import tempfile
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
-
-from fastapi import Depends, FastAPI, File, Form, Query, Request, UploadFile
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from docrunr_runtime import (
     StorageBackend,
@@ -25,6 +20,11 @@ from docrunr_runtime import (
     new_job_id,
     safe_client_filename,
 )
+from fastapi import Depends, FastAPI, File, Form, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from docrunr_api.broker import BrokerBridge
 from docrunr_api.config import ApiSettings
@@ -47,10 +47,10 @@ from docrunr_api.models import (
     SubmitDocumentData,
     SubmitDocumentResponse,
 )
-from docrunr_api.profiles import LlmProfileClient, ProfilesUnavailable
+from docrunr_api.profiles import LlmProfileClient, ProfilesUnavailableError
 from docrunr_api.repository import JobRepository
 
-ERROR_RESPONSES = {
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ApiErrorEnvelopeDto, "description": "VALIDATION_ERROR"},
     401: {"model": ApiErrorEnvelopeDto, "description": "UNAUTHORIZED"},
     403: {"model": ApiErrorEnvelopeDto, "description": "FORBIDDEN"},
@@ -61,7 +61,7 @@ ERROR_RESPONSES = {
 }
 
 
-class ApiProblem(Exception):
+class ApiProblemError(Exception):
     def __init__(self, status: int, code: str, message: str) -> None:
         self.status = status
         self.code = code
@@ -97,7 +97,7 @@ def create_app(
             "Local API for document extraction and optional embedding generation. "
             "Use a Bearer token when API_KEY is configured."
         ),
-        version="0.1.2",
+        version="0.0.1",
         docs_url="/",
         redoc_url=None,
         openapi_url="/openapi.json",
@@ -106,7 +106,7 @@ def create_app(
     security = HTTPBearer(auto_error=False, description="Optional local DocRunr API key")
 
     async def authorize(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+        credentials: HTTPAuthorizationCredentials | None = Depends(security),  # noqa: B008
     ) -> None:
         if not cfg.api_key:
             return
@@ -115,10 +115,10 @@ def create_app(
             or credentials.scheme.casefold() != "bearer"
             or not secrets.compare_digest(credentials.credentials, cfg.api_key)
         ):
-            raise ApiProblem(401, "UNAUTHORIZED", "Missing or invalid API key")
+            raise ApiProblemError(401, "UNAUTHORIZED", "Missing or invalid API key")
 
-    @app.exception_handler(ApiProblem)
-    async def api_problem_handler(_request: Request, exc: ApiProblem) -> JSONResponse:
+    @app.exception_handler(ApiProblemError)
+    async def api_problem_handler(_request: Request, exc: ApiProblemError) -> JSONResponse:
         return _error_response(exc.status, exc.code, exc.message)
 
     @app.exception_handler(RequestValidationError)
@@ -143,6 +143,7 @@ def create_app(
         operation_id="PublicApiController_submitDocument",
         summary="Upload document",
         tags=["Documents"],
+        dependencies=[Depends(authorize)],
     )
     async def submit_document(
         file: Annotated[UploadFile, File(description="Document to process.")],
@@ -150,31 +151,30 @@ def create_app(
             str | None,
             Form(description="Optional LiteLLM embedding profile."),
         ] = None,
-        _authorized: Annotated[None, Depends(authorize)] = None,
     ) -> SubmitDocumentResponse:
         filename = safe_client_filename(file.filename or "unknown")
         suffix = file_suffix_for_upload(filename)
         if not suffix or not is_allowed_upload_suffix(suffix):
-            raise ApiProblem(400, "VALIDATION_ERROR", "Unsupported or missing file extension")
+            raise ApiProblemError(400, "VALIDATION_ERROR", "Unsupported or missing file extension")
         profile = (llm_profile or "").strip() or None
         if profile:
             try:
                 allowed = await profile_client.list_profiles()
-            except ProfilesUnavailable as exc:
-                raise ApiProblem(503, "LITELLM_UNAVAILABLE", str(exc)) from exc
+            except ProfilesUnavailableError as exc:
+                raise ApiProblemError(503, "LITELLM_UNAVAILABLE", str(exc)) from exc
             if profile not in allowed:
-                raise ApiProblem(400, "VALIDATION_ERROR", "Unknown llm_profile")
+                raise ApiProblemError(400, "VALIDATION_ERROR", "Unknown llm_profile")
 
         job_id = new_job_id()
         source_path = input_relative_path(job_id, suffix)
         temp_path, size = await _stage_upload(file, cfg.api_max_upload_bytes, suffix)
         if size == 0:
             temp_path.unlink(missing_ok=True)
-            raise ApiProblem(400, "VALIDATION_ERROR", "Empty file")
+            raise ApiProblemError(400, "VALIDATION_ERROR", "Empty file")
         try:
             store.write(temp_path, source_path)
         except Exception as exc:
-            raise ApiProblem(503, "STORAGE_UNAVAILABLE", "Could not store upload") from exc
+            raise ApiProblemError(503, "STORAGE_UNAVAILABLE", "Could not store upload") from exc
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -199,7 +199,7 @@ def create_app(
             store.delete(source_path)
             raise
         if not bridge.wait_published(job_id):
-            raise ApiProblem(503, "QUEUE_UNAVAILABLE", "Job queue is unavailable")
+            raise ApiProblemError(503, "QUEUE_UNAVAILABLE", "Job queue is unavailable")
         return SubmitDocumentResponse(data=SubmitDocumentData(job_id=job_id))
 
     @app.get(
@@ -209,12 +209,12 @@ def create_app(
         operation_id="PublicApiController_listJobs",
         summary="List jobs",
         tags=["Jobs"],
+        dependencies=[Depends(authorize)],
     )
     async def list_jobs(
         limit: Annotated[int, Query(ge=1, le=100)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
         state: JobState | None = None,
-        _authorized: Annotated[None, Depends(authorize)] = None,
     ) -> JobListResponse:
         rows, has_more = repo.list_jobs(
             limit=limit,
@@ -226,41 +226,48 @@ def create_app(
         )
 
     @app.get(
-        "/api/v1/jobs/{job_id}",
+        "/api/v1/jobs/{jobId}",
         response_model=JobResponse,
         responses={key: ERROR_RESPONSES[key] for key in (401, 403, 404)},
         operation_id="PublicApiController_getJob",
         summary="Get job",
         tags=["Jobs"],
+        dependencies=[Depends(authorize)],
     )
     async def get_job(
-        job_id: str,
-        _authorized: Annotated[None, Depends(authorize)] = None,
+        jobId: str,  # noqa: N803 - public contract uses camelCase
     ) -> JobResponse:
-        row = repo.get_job(job_id)
+        row = repo.get_job(jobId)
         if row is None:
-            raise ApiProblem(404, "NOT_FOUND", "Job not found")
+            raise ApiProblemError(404, "NOT_FOUND", "Job not found")
         return JobResponse(data=_job_dto(row))
 
     @app.get(
-        "/api/v1/jobs/{job_id}/result",
-        response_model=JobResultResponse,
-        responses=ERROR_RESPONSES,
+        "/api/v1/jobs/{jobId}/result",
+        response_model=JobResultResponse | EmbeddingsResponse,
+        responses={
+            **ERROR_RESPONSES,
+            200: {
+                "description": "Extraction JSON, raw Markdown, or embeddings JSON.",
+                "content": {"text/markdown": {"schema": {"type": "string"}}},
+            },
+        },
         operation_id="PublicApiController_getJobResult",
         summary="Download job result",
         tags=["Jobs"],
+        dependencies=[Depends(authorize)],
     )
     async def get_job_result(
-        job_id: str,
+        jobId: str,  # noqa: N803 - public contract uses camelCase
         output_format: Annotated[
             Literal["json", "markdown", "embeddings"],
             Query(alias="format"),
         ] = "json",
-        _authorized: Annotated[None, Depends(authorize)] = None,
     ) -> Any:
+        job_id = jobId
         row = repo.get_job(job_id)
         if row is None:
-            raise ApiProblem(404, "NOT_FOUND", "Job not found")
+            raise ApiProblemError(404, "NOT_FOUND", "Job not found")
         if output_format == "embeddings":
             path = row.get("llm_artifact_path")
         elif output_format == "markdown":
@@ -268,14 +275,14 @@ def create_app(
         else:
             path = row.get("chunks_path")
         if not path:
-            raise ApiProblem(409, "JOB_NOT_READY", "Job result is not available yet")
+            raise ApiProblemError(409, "JOB_NOT_READY", "Job result is not available yet")
         content = _read_artifact(store, str(path))
         if output_format == "markdown":
             return Response(content=content, media_type="text/markdown; charset=utf-8")
         try:
             parsed = json.loads(content)
         except ValueError as exc:
-            raise ApiProblem(503, "STORAGE_UNAVAILABLE", "Stored result is invalid") from exc
+            raise ApiProblemError(503, "STORAGE_UNAVAILABLE", "Stored result is invalid") from exc
         if output_format == "embeddings":
             return EmbeddingsResponse(data=EmbeddingsData(job_id=job_id, result=parsed))
         return JobResultResponse(
@@ -289,16 +296,44 @@ def create_app(
         operation_id="PublicLlmProfilesController_listProfiles",
         summary="List LLM profiles",
         tags=["LLM"],
+        dependencies=[Depends(authorize)],
     )
-    async def list_profiles(
-        _authorized: Annotated[None, Depends(authorize)] = None,
-    ) -> ProfilesResponse:
+    async def list_profiles() -> ProfilesResponse:
         try:
             names = await profile_client.list_profiles()
-        except ProfilesUnavailable as exc:
-            raise ApiProblem(503, "LITELLM_UNAVAILABLE", str(exc)) from exc
+        except ProfilesUnavailableError as exc:
+            raise ApiProblemError(503, "LITELLM_UNAVAILABLE", str(exc)) from exc
         return ProfilesResponse(data=ProfilesData(profiles=names))
 
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema is not None:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+            tags=[
+                {"name": "Documents", "description": "Upload documents for processing."},
+                {"name": "Jobs", "description": "Inspect jobs and download results."},
+                {"name": "LLM", "description": "Discover embedding profiles."},
+            ],
+        )
+        security_schemes = schema.get("components", {}).get("securitySchemes", {})
+        if "HTTPBearer" in security_schemes:
+            security_schemes["bearerAuth"] = security_schemes.pop("HTTPBearer")
+        for path_item in schema.get("paths", {}).values():
+            for operation in path_item.values():
+                if not isinstance(operation, dict):
+                    continue
+                operation.get("responses", {}).pop("422", None)
+                for requirement in operation.get("security", []):
+                    if "HTTPBearer" in requirement:
+                        requirement["bearerAuth"] = requirement.pop("HTTPBearer")
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
     return app
 
 
@@ -310,7 +345,9 @@ async def _stage_upload(file: UploadFile, limit: int, suffix: str) -> tuple[Path
             size += len(chunk)
             if size > limit:
                 path.unlink(missing_ok=True)
-                raise ApiProblem(413, "PAYLOAD_TOO_LARGE", "Upload exceeds configured size limit")
+                raise ApiProblemError(
+                    413, "PAYLOAD_TOO_LARGE", "Upload exceeds configured size limit"
+                )
             staged.write(chunk)
     return path, size
 
@@ -320,7 +357,7 @@ def _read_artifact(storage: StorageBackend, path: str) -> bytes:
         local = storage.read(path)
         return local.read_bytes()
     except FileNotFoundError as exc:
-        raise ApiProblem(409, "JOB_NOT_READY", "Job result is not available yet") from exc
+        raise ApiProblemError(409, "JOB_NOT_READY", "Job result is not available yet") from exc
     finally:
         if "local" in locals():
             storage.cleanup(local)

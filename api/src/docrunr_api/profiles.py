@@ -10,7 +10,7 @@ import httpx
 from docrunr_api.config import ApiSettings
 
 
-class ProfilesUnavailable(RuntimeError):
+class ProfilesUnavailableError(RuntimeError):
     pass
 
 
@@ -22,7 +22,7 @@ class LlmProfileClient:
 
     async def list_profiles(self) -> list[str]:
         if not self._settings.litellm_base_url.strip():
-            raise ProfilesUnavailable("LiteLLM is not configured")
+            raise ProfilesUnavailableError("LiteLLM is not configured")
         now = time.monotonic()
         if self._cache and self._cache[0] > now:
             return list(self._cache[1])
@@ -44,7 +44,7 @@ class LlmProfileClient:
                     response.raise_for_status()
                     body = response.json()
             except (httpx.HTTPError, ValueError) as exc:
-                raise ProfilesUnavailable("LiteLLM is unavailable") from exc
+                raise ProfilesUnavailableError("LiteLLM is unavailable") from exc
             profiles = sorted(
                 {
                     str(item["id"]).strip()

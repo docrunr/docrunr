@@ -9,7 +9,6 @@ import time
 from typing import Any
 
 import pika
-
 from docrunr_runtime.messages import EXTRACTION_JOB_QUEUE_ARGUMENTS
 
 from docrunr_api.config import ApiSettings
@@ -134,9 +133,7 @@ class BrokerBridge:
     def _llm_callback(self, channel: Any, method: Any, _properties: Any, body: bytes) -> None:
         self._consume(channel, method, body, self._repository.apply_llm_result)
 
-    def _lifecycle_callback(
-        self, channel: Any, method: Any, _properties: Any, body: bytes
-    ) -> None:
+    def _lifecycle_callback(self, channel: Any, method: Any, _properties: Any, body: bytes) -> None:
         self._consume(channel, method, body, self._repository.apply_lifecycle)
 
     def _consume(self, channel: Any, method: Any, body: bytes, apply: Any) -> None:

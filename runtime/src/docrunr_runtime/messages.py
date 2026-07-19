@@ -13,9 +13,31 @@ EXTRACTION_JOB_QUEUE_ARGUMENTS: dict[str, int] = {"x-max-priority": JOB_QUEUE_MA
 
 ALLOWED_UPLOAD_SUFFIXES = frozenset(
     {
-        ".pdf", ".docx", ".doc", ".odt", ".xlsx", ".xls", ".ods", ".csv",
-        ".pptx", ".ppt", ".odp", ".eml", ".msg", ".html", ".htm", ".xml",
-        ".md", ".json", ".txt", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp",
+        ".pdf",
+        ".docx",
+        ".doc",
+        ".odt",
+        ".xlsx",
+        ".xls",
+        ".ods",
+        ".csv",
+        ".pptx",
+        ".ppt",
+        ".odp",
+        ".eml",
+        ".msg",
+        ".html",
+        ".htm",
+        ".xml",
+        ".md",
+        ".json",
+        ".txt",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".tiff",
+        ".tif",
+        ".bmp",
     }
 )
 
