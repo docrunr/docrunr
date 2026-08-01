@@ -44,7 +44,7 @@ jobs:
         run: UV_CACHE_DIR=.uv-cache uv run pytest -q
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
 
