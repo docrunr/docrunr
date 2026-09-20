@@ -64,7 +64,7 @@ class LlmWorkerSettings(BaseSettings):
     def consumed_queues(self) -> tuple[str, ...]:
         return (self.rabbitmq_llm_queue,)
 
-    def model_post_init(self, *args: Any) -> None:
+    def model_post_init(self, _context: Any) -> None:
         # Map localhost / 127.0.0.1 to the litellm service when using Compose defaults: host
         # .env often sets LITELLM_BASE_URL=http://localhost:4000; inside the container use litellm.
         new_url = self.litellm_base_url

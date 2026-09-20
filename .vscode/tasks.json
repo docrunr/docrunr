@@ -5,7 +5,7 @@
       "label": "test",
       "type": "shell",
       "command": "make",
-      "args": ["test", "FILTER=${input:testFilter}"],
+      "args": ["test", "FILTER='${input:testFilter}'"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -21,7 +21,7 @@
       "label": "test:samples",
       "type": "shell",
       "command": "make",
-      "args": ["test-samples", "INCLUDE=${input:includeFilter}"],
+      "args": ["test-samples", "INCLUDE='${input:includeFilter}'"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -39,8 +39,8 @@
       "command": "make",
       "args": [
         "test-integration-txt",
-        "SOURCE=${input:integrationSampleSource}",
-        "COUNT=${input:integrationSampleCount}"
+        "SOURCE='${input:integrationSampleSource}'",
+        "COUNT='${input:integrationSampleCount}'"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -59,8 +59,8 @@
       "command": "make",
       "args": [
         "test-integration-s3",
-        "SOURCE=${input:integrationSampleSource}",
-        "COUNT=${input:integrationSampleCount}"
+        "SOURCE='${input:integrationSampleSource}'",
+        "COUNT='${input:integrationSampleCount}'"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -79,8 +79,8 @@
       "command": "make",
       "args": [
         "test-integration-llm",
-        "SOURCE=${input:integrationSampleSource}",
-        "COUNT=${input:integrationSampleCount}"
+        "SOURCE='${input:integrationSampleSource}'",
+        "COUNT='${input:integrationSampleCount}'"
       ],
       "options": {
         "cwd": "${workspaceFolder}",
@@ -102,8 +102,8 @@
       "command": "make",
       "args": [
         "download-samples",
-        "MIME=${input:downloadMimeType}",
-        "N=${input:downloadDocCount}"
+        "MIME='${input:downloadMimeType}'",
+        "N='${input:downloadDocCount}'"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -120,7 +120,7 @@
       "label": "docker:run",
       "type": "shell",
       "command": "make",
-      "args": ["docker-run", "PROFILE=${input:dockerRunProfile}"],
+      "args": ["docker-run", "PROFILE='${input:dockerRunProfile}'"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -190,7 +190,7 @@
       "label": "docker:build",
       "type": "shell",
       "command": "make",
-      "args": ["docker-build", "TARGET=${input:dockerBuildTarget}"],
+      "args": ["docker-build", "TARGET='${input:dockerBuildTarget}'"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -288,7 +288,7 @@
       "label": "release",
       "type": "shell",
       "command": "make",
-      "args": ["release", "VERSION=${input:releaseVersion}"],
+      "args": ["release", "VERSION='${input:releaseVersion}'"],
       "options": {
         "cwd": "${workspaceFolder}"
       },

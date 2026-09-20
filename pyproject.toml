@@ -88,3 +88,5 @@ markers = [
 ] }
 # Ambient merge of Vite’s ImportMeta (not a runtime class)
 "vite-env.d.ts" = { whitelist = ["ImportMeta"] }
+# Module-level flag; used inside functions (JS analyzer misses intra-file refs)
+"dev.mjs" = { whitelist = ["LLM_MODE"] }
