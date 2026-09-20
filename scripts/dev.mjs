@@ -7,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { freeListenPorts } from './free-listen-ports.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -32,7 +33,7 @@ async function main() {
     process.exit(0);
   }
 
-  await freeLocalListenPorts();
+  await freeListenPorts(LOCAL_LISTEN_PORTS, { logPrefix: 'dev' });
   await ensureRabbitmqHealthy();
   if (LLM_MODE) {
     await ensureLitellmHealthy();
@@ -114,86 +115,6 @@ function printHelp() {
   console.log();
   console.log('Options:');
   console.log('  --no-llm   Skip LiteLLM proxy and worker-llm.');
-}
-
-async function freeLocalListenPorts() {
-  for (const port of LOCAL_LISTEN_PORTS) {
-    await freeListenPort(port);
-  }
-}
-
-async function freeListenPort(port) {
-  const pids = await listListenPids(port);
-  if (pids.length === 0) {
-    return;
-  }
-
-  console.log(`[dev] freeing port ${port} (pid ${pids.join(', ')})`);
-  for (const pid of pids) {
-    killPid(pid, 'SIGTERM');
-  }
-
-  const deadline = Date.now() + 4000;
-  while (Date.now() < deadline) {
-    const remaining = await listListenPids(port);
-    if (remaining.length === 0) {
-      return;
-    }
-    await delay(150);
-  }
-
-  const leftover = await listListenPids(port);
-  for (const pid of leftover) {
-    killPid(pid, 'SIGKILL');
-  }
-
-  const stillHeld = await listListenPids(port);
-  if (stillHeld.length > 0) {
-    throw new Error(`port ${port} still in use by pid ${stillHeld.join(', ')}`);
-  }
-}
-
-function killPid(pid, signal) {
-  if (pid === process.pid) {
-    return;
-  }
-  try {
-    process.kill(pid, signal);
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ESRCH') {
-      return;
-    }
-    throw error;
-  }
-}
-
-async function listListenPids(port) {
-  let stdout = '';
-  let code = 1;
-  try {
-    const result = await capture('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t']);
-    stdout = result.stdout;
-    code = result.code;
-  } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      console.warn('[dev] lsof not found; cannot free occupied ports automatically');
-      return [];
-    }
-    throw error;
-  }
-
-  if (code !== 0 || !stdout.trim()) {
-    return [];
-  }
-
-  return [
-    ...new Set(
-      stdout
-        .split(/\s+/u)
-        .map((value) => Number.parseInt(value, 10))
-        .filter((pid) => Number.isInteger(pid) && pid > 0 && pid !== process.pid),
-    ),
-  ];
 }
 
 async function buildWorkerEnv() {

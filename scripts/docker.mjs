@@ -11,9 +11,12 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { freeListenPorts } from './free-listen-ports.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
+const COMPOSE_HOST_PORTS = [8080, 8081, 8082, 4000];
+const S3_HOST_PORTS = [8333, 9333];
 
 /** @param {'local' | 's3'} profile */
 function composeFileArgs(profile) {
@@ -45,7 +48,10 @@ function composeFileArgs(profile) {
   ];
 }
 
-function runCompose(profile) {
+async function runCompose(profile) {
+  const ports = profile === 's3' ? [...COMPOSE_HOST_PORTS, ...S3_HOST_PORTS] : COMPOSE_HOST_PORTS;
+  await freeListenPorts(ports, { logPrefix: 'docker', skipDockerListeners: true });
+
   const files = composeFileArgs(profile);
   const up = spawnSync(
     'docker',
@@ -103,7 +109,7 @@ function printHelp() {
 `);
 }
 
-function main() {
+async function main() {
   const [, , command, arg] = process.argv;
 
   if (command === 'help' || command === '-h' || command === '--help') {
@@ -122,7 +128,7 @@ function main() {
       console.error(`Unknown profile: ${arg} (use local or s3)`);
       process.exit(1);
     }
-    runCompose(profile);
+    await runCompose(profile);
     return;
   }
 
@@ -140,4 +146,7 @@ function main() {
   process.exit(command ? 1 : 0);
 }
 
-main();
+main().catch((error) => {
+  console.error(`[docker] ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+});
