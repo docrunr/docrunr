@@ -183,7 +183,7 @@
     {
       "label": "fallow",
       "type": "shell",
-      "command": "pnpm -C ui exec fallow",
+      "command": "pnpm -C ui exec fallow dead-code",
       "options": {
         "cwd": "${workspaceFolder}"
       },

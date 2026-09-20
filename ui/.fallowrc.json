@@ -1,5 +1,5 @@
 {
-  "$schema": "https://docs.fallow.tools/schemas/fallowrc.json",
+  "$schema": "./node_modules/fallow/schema.json",
   "ignoreExports": [
     {
       "file": "src/**/*.module.css",

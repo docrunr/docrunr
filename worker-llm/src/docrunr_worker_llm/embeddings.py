@@ -39,8 +39,10 @@ def _load_chunks(storage: StorageBackend, chunks_path: str) -> list[dict[str, An
         storage.cleanup(local)
     if isinstance(data, list):
         return data
-    if isinstance(data, dict) and "chunks" in data:
-        return data["chunks"]
+    if isinstance(data, dict):
+        chunks = data.get("chunks")
+        if isinstance(chunks, list):
+            return chunks
     raise ValueError(f"Unexpected chunk JSON shape at {chunks_path}")
 
 

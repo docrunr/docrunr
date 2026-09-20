@@ -4,7 +4,7 @@
 #   docker run docrunr
 
 # Stage 1: UI build
-FROM node:25-bookworm-slim AS ui-builder
+FROM node:26-bookworm-slim AS ui-builder
 
 WORKDIR /app
 

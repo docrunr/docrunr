@@ -7,7 +7,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from docrunr_worker_llm.embeddings import generate_embeddings
 
@@ -54,10 +54,11 @@ def _parse_llm_request(body: bytes) -> LlmJobRequest:
     msg = _parse_json_object(body, context="llm-job")
     raw_profile = msg.get("llm_profile")
     llm_profile = raw_profile if isinstance(raw_profile, str) else ""
+    filename = msg.get("filename")
     return LlmJobRequest(
         job_id=_require_non_empty_str(msg, "job_id", context="llm-job"),
         extract_job_id=_require_non_empty_str(msg, "extract_job_id", context="llm-job"),
-        filename=msg.get("filename") if isinstance(msg.get("filename"), str) else "unknown",
+        filename=filename if isinstance(filename, str) else "unknown",
         source_path=_require_non_empty_str(msg, "source_path", context="llm-job"),
         chunks_path=_require_non_empty_str(msg, "chunks_path", context="llm-job"),
         llm_profile=llm_profile,
@@ -98,7 +99,7 @@ def _build_outcome(
     artifact_path: str | None = None,
     error: str | None = None,
 ) -> LlmOutcome:
-    result = {
+    result: dict[str, object] = {
         "job_id": request.job_id,
         "extract_job_id": request.extract_job_id,
         "status": status,
@@ -115,7 +116,7 @@ def _build_outcome(
     }
     return LlmOutcome(
         result_json=json.dumps(result),
-        result=cast(dict[str, object], result),
+        result=result,
         status=status,
         duration_seconds=duration_seconds,
     )

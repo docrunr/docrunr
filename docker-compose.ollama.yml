@@ -7,7 +7,7 @@
 
 services:
   ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.34.2}
     restart: unless-stopped
     environment:
       OLLAMA_EMBED_MODELS: ${OLLAMA_EMBED_MODELS:-nomic-embed-text,embeddinggemma,bge-m3,qwen3-embedding:8b}

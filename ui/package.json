@@ -12,7 +12,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
-    "fallow": "fallow"
+    "fallow": "fallow dead-code"
   },
   "dependencies": {
     "@mantine/charts": "9.0.1",
@@ -30,8 +30,8 @@
     "recharts": "^3.2.1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
     "@eslint/js": "^9.0.0",
+    "@types/node": "^22.10.0",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -39,7 +39,7 @@
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.0",
-    "fallow": "^2.13.0",
+    "fallow": "^3.27.0",
     "globals": "^16.0.0",
     "prettier": "^3.0.0",
     "typescript": "^5.6.3",
