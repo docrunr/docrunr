@@ -6,7 +6,7 @@
 
 ## 1. What DocRunr Is
 
-DocRunr is a predictable document processing toolkit that converts documents into clean Markdown and structured text chunks ready for RAG pipelines. It works as a CLI, a Python library, and a scalable RabbitMQ worker with a bundled UI.
+DocRunr is a predictable document processing toolkit that converts documents into clean Markdown and structured text chunks ready for RAG pipelines. It works as a CLI, a Python library, and a scalable RabbitMQ worker with a bundled UI. An optional local public HTTP API (`docrunr-api`) is available for application integrations that prefer HTTP over publishing to RabbitMQ directly.
 
 It detects the file type, picks the best extraction strategy, cleans the Markdown, and splits it into structure-aware chunks. Zero configuration. No tuning. No knobs. It just works.
 
@@ -375,7 +375,7 @@ Failed files are skipped with a message. They never crash the batch.
 
 ---
 
-## 16. Python API
+## 16. Python Library
 
 ```python
 from docrunr import convert
@@ -386,7 +386,7 @@ result.markdown   # cleaned Markdown string
 result.chunks     # list of Chunk objects
 ```
 
-The API mirrors CLI behavior exactly. Same input, same output, same predictability.
+The library mirrors CLI behavior exactly. Same input, same output, same predictability. This is the in-process `docrunr` package, not the HTTP gateway in section 24.
 
 ---
 
@@ -408,6 +408,7 @@ docrunr/
 ├── runtime/                       # Shared lightweight storage and messaging primitives
 │
 ├── api/                           # Local public HTTP API (`docrunr-api`)
+│   ├── openapi.json               # Checked-in OpenAPI contract
 │   └── src/docrunr_api/           # OpenAPI routes, SQLite projection, outbox, result consumers
 │
 ├── worker/                        # RabbitMQ worker package (`docrunr_worker`)
@@ -474,7 +475,7 @@ The worker is a thin layer that turns DocRunr into a scalable document processin
 **Design.** The worker is intentionally minimal. It does three things:
 
 1. Consume job messages from RabbitMQ
-2. Call `docrunr.convert()` (the same Python API as the CLI)
+2. Call `docrunr.convert()` (the same Python library as the CLI)
 3. Write extraction results to shared storage and publish a result message
 
 It is not a framework. It has no plugin system. It does ship with a bundled operator UI for uploads, queue visibility, and artifact inspection.
@@ -798,20 +799,41 @@ The health server uses Python's stdlib `http.server`. No framework. No external 
 
 ## 24. Local Public API
 
-`docrunr-api` is a FastAPI gateway for application integrations. Container port **8080** (Compose host port **8082** via `DOCRUNR_API_PORT`). Swagger at `/`, OpenAPI at `/openapi.json`, cloud-compatible surface at `/api/v1`.
+`docrunr-api` is an optional FastAPI gateway for application integrations. RabbitMQ remains the main integration point; omit this overlay when a platform API or other consumer owns `docrunr.results`. It is a separate HTTP surface from the worker UI routes in section 23. Process listen port **8080** (`API_PORT`; local `scripts/dev.mjs` sets **8082**). Compose publishes host **8082** via `DOCRUNR_API_PORT`. Swagger UI at `/`, machine-readable contract at `/openapi.json` and in-repo `api/openapi.json`. Application routes live under `/api/v1`.
 
 ### Endpoints
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
-| `POST` | `/api/v1/documents` | Multipart upload (`file`); optional form `llm_profile` |
-| `GET` | `/api/v1/jobs` | List jobs (`limit`, `offset`, `state`) |
+| `POST` | `/api/v1/documents` | Multipart upload (`file`); optional form `llm_profile`; returns `201` |
+| `GET` | `/api/v1/jobs` | List jobs (`limit` 1..100 default 50, `offset`, `state`) |
 | `GET` | `/api/v1/jobs/{jobId}` | Job projection |
 | `GET` | `/api/v1/jobs/{jobId}/result` | Artifact download (`format`: `json`, `markdown`, or `embeddings`) |
 | `GET` | `/api/v1/llm/profiles` | LiteLLM profile names |
-| `GET` | `/health` | Liveness (`rabbitmq` ready flag) |
+| `GET` | `/health` | Liveness (`rabbitmq` ready flag; omitted from OpenAPI) |
 
-Public job states: `queued` → `processing` → `succeeded` / `failed`. Result endpoints return `409 JOB_NOT_READY` until the matching artifact path is projected.
+Public job states: `queued` → `processing` → `succeeded` / `failed`. Uploads currently publish AMQP `priority` `0` (RabbitMQ and the worker upload UI already accept `0..255`). Result endpoints return `409 JOB_NOT_READY` until the matching artifact path is projected.
+
+### Contract
+
+Success bodies use `{ "data": ... }`. Errors use `{ "error": { "code", "message", "status" } }`.
+
+`POST /api/v1/documents` returns `{ "data": { "job_id", "state": "queued" } }`. Job list returns `{ "data": { "items", "has_more" } }`.
+
+Job projection fields: `job_id`, `state`, `file_name`, `file_size`, `content_type`, `tokens_used`, `chars_used`, `chunk_count`, `created_at`, `started_at`, `completed_at`, `error_message`, `result.available`. When `llm_profile` was set, `llm_transform` is present with `profile`, `state` (`queued` / `succeeded` / `failed`), `provider`, `artifact_available`, `chunk_count`, `vector_count`, `error_message`, and `completed_at`.
+
+`GET …/result?format=json` (default) returns the chunk JSON envelope. `format=markdown` returns raw Markdown (`text/markdown`). `format=embeddings` returns `{ "data": { "job_id", "result" } }` from the embeddings artifact.
+
+`GET /health` returns `{ "status": "ok" or "degraded", "rabbitmq": <bool> }` with HTTP 503 when degraded.
+
+| HTTP | `error.code` | When |
+| ---- | ------------ | ---- |
+| 400 | `VALIDATION_ERROR` | Bad upload, unknown `llm_profile`, empty file |
+| 401 | `UNAUTHORIZED` | Missing or invalid Bearer token when `API_KEY` is set |
+| 404 | `NOT_FOUND` | Unknown `jobId` |
+| 409 | `JOB_NOT_READY` | Artifact not projected yet, or file missing from storage |
+| 413 | `PAYLOAD_TOO_LARGE` | Upload exceeds `API_MAX_UPLOAD_BYTES` |
+| 503 | `LITELLM_UNAVAILABLE` / `STORAGE_UNAVAILABLE` / `QUEUE_UNAVAILABLE` | Profile lookup, storage, or outbox publish failed |
 
 ### Flow
 
@@ -839,6 +861,8 @@ The API is the exclusive consumer of `docrunr.results`, `docrunr.llm.results`, a
 | `API_MAX_UPLOAD_BYTES` | `104857600` | Upload size limit |
 | `RABBITMQ_LIFECYCLE_QUEUE` | `docrunr.lifecycle` | Lifecycle consume queue (API default) |
 | `LITELLM_BASE_URL` | *(empty)* | Profiles lookup; Compose sets `http://litellm:4000` |
+| `LITELLM_API_KEY` | *(empty)* | Forwarded to LiteLLM when listing profiles |
+| `LITELLM_TIMEOUT_SECONDS` | `10` | Timeout for LiteLLM profile lookup (API only; worker-llm uses 600) |
 | `LITELLM_PROFILES_CACHE_SECONDS` | `30` | Profile list cache TTL |
 
 RabbitMQ and storage variables match the workers (section 22).
@@ -854,7 +878,7 @@ These may be added later. They must not increase CLI complexity.
 - Metadata extraction (author, date, title)
 - Custom parser plugins
 - Streaming / large file support
-- Upload UI controls for job priority (API and RabbitMQ already support `priority`)
+- Upload UI controls for job priority (worker upload and RabbitMQ already support `priority`; public `docrunr-api` currently publishes `0`)
 - Result TTL and automatic cleanup
 
 ---

@@ -22,12 +22,12 @@ This guide keeps contributions simple, consistent, and easy to review.
 
 ## Local Setup
 
-1. Install Python 3.11+ and `uv`.
+1. Install Python 3.11+, `uv`, and Node.js 20+ with `corepack` (`pnpm`).
 2. Clone the repository.
 3. Run:
 
 ```bash
-uv sync --dev
+make install
 ```
 
 ## Development Workflow
@@ -37,9 +37,8 @@ uv sync --dev
 3. Run quality checks locally:
 
 ```bash
-uv run ruff check .
-uv run mypy .
-uv run pytest -q
+make lint
+make test
 ```
 
 4. Open a pull request to `release/*` unless maintainers ask otherwise.
@@ -65,7 +64,7 @@ Examples:
 
 - CI runs on `release/**` branches.
 - Release is tag-driven (`vX.Y.Z`) from `main`.
-- Use VS Code task `release` (or `./scripts/release.sh`) on `main` to create/push tags.
+- Use `make release` (or the VS Code `release` task) on `main` to create/push tags.
 - Publishing on release tags:
   - PyPI: `docrunr` (CLI/library)
   - Docker: TXT worker, LLM worker, and API images (multi-arch `amd64` + `arm64`)

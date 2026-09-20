@@ -16,7 +16,7 @@
   <img src="./assets/docrunr-intro.gif" alt="DocRunr dashboard: metrics, activity heatmap, and charts" />
 </p>
 
-DocRunr supports a CLI for local and batch work, queue workers with an operator UI, and a local HTTP API for application integrations.
+DocRunr supports a CLI for local and batch work, queue workers with an operator UI, and an optional local HTTP API for application integrations.
 
 ### ✨ **Highlights**
 
@@ -25,7 +25,7 @@ DocRunr supports a CLI for local and batch work, queue workers with an operator 
 - Automatic parser fallback when extraction quality is weak.
 - Worker setup with queue processing, uploads, health, stats, and artifact inspection.
 - UI for uploads, jobs, and output review.
-- Local public HTTP API (`/api/v1`) for application integrations.
+- Optional local public HTTP API (`/api/v1`) for application integrations.
 
 ### 🎯 **Simple by design**
 
@@ -48,11 +48,11 @@ flowchart LR
     C --> E["🧩 Structured chunks (.json)"]
 ```
 
-The bundled UI sits on top of that same worker flow. The local public API is a separate gateway: it stores the upload, publishes the job, and projects results back over HTTP.
+The bundled UI sits on top of that same worker flow. The local public API is an optional gateway: it stores the upload, publishes the job, and projects results back over HTTP.
 
 ### 🐳 **Docker**
 
-The default Docker stack is RabbitMQ, the public API, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), and local storage under `./.data`:
+The default Docker stack is RabbitMQ, the TXT worker, the LLM worker (LiteLLM + in-Docker Ollama), local storage under `./.data`, and the optional public API:
 
 ```bash
 docker compose up -d --build
@@ -179,8 +179,7 @@ To work on DocRunr locally, you need Python 3.11+, [`uv`](https://github.com/ast
 git clone https://github.com/docrunr/docrunr.git
 cd docrunr
 cp .env.example .env
-uv sync
-pnpm -C ui install
+make install
 ```
 
 **Workspace layout**
@@ -199,14 +198,14 @@ docrunr/
 
 #### Commands
 
-After the clone and `.env` copy above, the commands below install dependencies and run DocRunr Worker in dev mode. For Docker, tests, lint, release, and other workflows, use the tasks in [`.vscode/tasks.json`](./.vscode/tasks.json).
+After the clone and `.env` copy above:
 
-| Command                        | Description                                        |
-| ------------------------------ | -------------------------------------------------- |
-| `uv sync`                      | Install the Python workspace and dev dependencies. |
-| `pnpm -C ui install`           | Install UI dependencies.                           |
-| `node ./scripts/dev.mjs`       | Start dev                                          |
-| `node ./scripts/dev.mjs --llm` | Start dev with LLM worker + LiteLLM                |
+```bash
+make install
+make dev
+```
+
+`make help` lists lint, tests, Docker, the public API, and release. VS Code tasks call the same Makefile targets.
 
 ### ⌨️ **CLI**
 

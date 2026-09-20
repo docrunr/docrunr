@@ -4,7 +4,8 @@
     {
       "label": "test",
       "type": "shell",
-      "command": "node ./scripts/test.mjs unit '${input:testFilter}'",
+      "command": "make",
+      "args": ["test", "FILTER=${input:testFilter}"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -19,7 +20,8 @@
     {
       "label": "test:samples",
       "type": "shell",
-      "command": "node ./scripts/test.mjs samples '${input:includeFilter}'",
+      "command": "make",
+      "args": ["test-samples", "INCLUDE=${input:includeFilter}"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -34,7 +36,12 @@
     {
       "label": "test:integration:txt",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration txt '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
+      "command": "make",
+      "args": [
+        "test-integration-txt",
+        "SOURCE=${input:integrationSampleSource}",
+        "COUNT=${input:integrationSampleCount}"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -49,7 +56,12 @@
     {
       "label": "test:integration:s3",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration s3 '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
+      "command": "make",
+      "args": [
+        "test-integration-s3",
+        "SOURCE=${input:integrationSampleSource}",
+        "COUNT=${input:integrationSampleCount}"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -64,7 +76,12 @@
     {
       "label": "test:integration:llm",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration llm '${input:integrationSampleSource}' '${input:integrationSampleCount}'",
+      "command": "make",
+      "args": [
+        "test-integration-llm",
+        "SOURCE=${input:integrationSampleSource}",
+        "COUNT=${input:integrationSampleCount}"
+      ],
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
@@ -82,7 +99,12 @@
     {
       "label": "download:samples",
       "type": "shell",
-      "command": "mime='${input:downloadMimeType}'; n='${input:downloadDocCount}'; uv run python -m tests.downloads \"$mime\" \"$n\"",
+      "command": "make",
+      "args": [
+        "download-samples",
+        "MIME=${input:downloadMimeType}",
+        "N=${input:downloadDocCount}"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -97,7 +119,8 @@
     {
       "label": "docker:run",
       "type": "shell",
-      "command": "node ./scripts/docker.mjs run '${input:dockerRunProfile}'",
+      "command": "make",
+      "args": ["docker-run", "PROFILE=${input:dockerRunProfile}"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -112,7 +135,8 @@
     {
       "label": "dev",
       "type": "shell",
-      "command": "node ./scripts/dev.mjs",
+      "command": "make",
+      "args": ["dev"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -127,15 +151,10 @@
     {
       "label": "api:dev",
       "type": "shell",
-      "command": "uv run uvicorn docrunr_api.app:create_app --factory --reload --host 127.0.0.1 --port 8082",
+      "command": "make",
+      "args": ["api-dev"],
       "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "RABBITMQ_HOST": "localhost",
-          "STORAGE_BASE_PATH": "${workspaceFolder}/.data",
-          "API_DB_PATH": "${workspaceFolder}/.data/docrunr-api.sqlite",
-          "LITELLM_BASE_URL": "http://localhost:4000"
-        }
+        "cwd": "${workspaceFolder}"
       },
       "group": "none",
       "presentation": {
@@ -148,7 +167,8 @@
     {
       "label": "test:api",
       "type": "shell",
-      "command": "uv run pytest -q tests/runtime tests/api",
+      "command": "make",
+      "args": ["test-api"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -158,7 +178,8 @@
     {
       "label": "test:integration:api",
       "type": "shell",
-      "command": "node ./scripts/test.mjs integration api",
+      "command": "make",
+      "args": ["test-integration-api"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -168,7 +189,8 @@
     {
       "label": "docker:build",
       "type": "shell",
-      "command": "node ./scripts/docker.mjs build '${input:dockerBuildTarget}'",
+      "command": "make",
+      "args": ["docker-build", "TARGET=${input:dockerBuildTarget}"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -183,7 +205,8 @@
     {
       "label": "fallow",
       "type": "shell",
-      "command": "pnpm -C ui exec fallow dead-code",
+      "command": "make",
+      "args": ["fallow"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -198,7 +221,8 @@
     {
       "label": "lint",
       "type": "shell",
-      "command": "node ./scripts/lint.mjs",
+      "command": "make",
+      "args": ["lint"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -216,7 +240,8 @@
     {
       "label": "skylos",
       "type": "shell",
-      "command": "uv run skylos .",
+      "command": "make",
+      "args": ["skylos"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -231,7 +256,8 @@
     {
       "label": "install",
       "type": "shell",
-      "command": "uv sync && pnpm -C ui install",
+      "command": "make",
+      "args": ["install"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -245,7 +271,8 @@
     {
       "label": "purge",
       "type": "shell",
-      "command": "./scripts/purge.sh",
+      "command": "make",
+      "args": ["purge"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -260,7 +287,8 @@
     {
       "label": "release",
       "type": "shell",
-      "command": "v='${input:releaseVersion}'; if [ -z \"$v\" ]; then printf '\\n' | ./scripts/release.sh --push; else ./scripts/release.sh --version \"$v\" --push; fi",
+      "command": "make",
+      "args": ["release", "VERSION=${input:releaseVersion}"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
