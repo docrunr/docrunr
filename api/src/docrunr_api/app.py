@@ -7,6 +7,8 @@ import secrets
 import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -68,6 +70,13 @@ class ApiProblemError(Exception):
         self.message = message
 
 
+def _api_version() -> str:
+    try:
+        return package_version("docrunr-api")
+    except PackageNotFoundError:
+        return "0.0.0"
+
+
 def create_app(
     settings: ApiSettings | None = None,
     *,
@@ -97,7 +106,7 @@ def create_app(
             "Local API for document extraction and optional embedding generation. "
             "Use a Bearer token when API_KEY is configured."
         ),
-        version="0.0.1",
+        version=_api_version(),
         docs_url="/",
         redoc_url=None,
         openapi_url="/openapi.json",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib.metadata import version as package_version
 from pathlib import Path
 
 from docrunr_api.app import create_app
@@ -68,7 +69,9 @@ def test_swagger_is_served_at_root(tmp_path) -> None:
 
 def test_openapi_snapshot_is_current() -> None:
     expected = json.loads((Path(__file__).parents[2] / "api" / "openapi.json").read_text())
-    assert create_app().openapi() == expected
+    spec = create_app().openapi()
+    assert spec == expected
+    assert spec["info"]["version"] == package_version("docrunr-api")
 
 
 def test_bearer_auth_uses_error_envelope(tmp_path) -> None:

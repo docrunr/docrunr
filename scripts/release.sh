@@ -17,7 +17,7 @@ Workflow (recommended):
 Behavior:
   - Must run on main branch
   - Requires clean working tree
-  - Updates version fields in workspace/API/runtime/core/workers/UI manifests
+  - Updates version fields in workspace/API/runtime/core/workers/UI manifests and the OpenAPI snapshot
   - Creates release commit `🚀 Release vX.Y.Z`
   - If --version is omitted in a terminal session, prompts for a version with the next patch as default
   - If --version is omitted non-interactively: first release is 0.0.1; otherwise patch-bump from latest vX.Y.Z
@@ -37,6 +37,7 @@ release_files=(
   "worker/pyproject.toml"
   "worker-llm/pyproject.toml"
   "ui/package.json"
+  "api/openapi.json"
 )
 
 while [[ $# -gt 0 ]]; do
@@ -137,7 +138,17 @@ path = Path(sys.argv[1])
 version = sys.argv[2]
 text = path.read_text()
 
-if path.suffix == ".json":
+if path.name == "openapi.json":
+    updated, count = re.subn(
+        r'(?m)^    "version": "[^"]+"$',
+        f'    "version": "{version}"',
+        text,
+        count=1,
+    )
+    if count != 1:
+        raise SystemExit(f"Could not update version in {path}")
+    path.write_text(updated)
+elif path.suffix == ".json":
     data = json.loads(text)
     data["version"] = version
     path.write_text(json.dumps(data, indent=2) + "\n")
