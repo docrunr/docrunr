@@ -38,6 +38,14 @@ _EXT_TO_MIME: dict[str, str] = {
 
 _magika_instance: Any = None
 _HTML_EXTENSIONS = {".html", ".htm"}
+_TEXTUAL_MIMES = {
+    "text/html",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/json",
+    "application/xml",
+}
 
 
 def _get_magika() -> Any:
@@ -70,6 +78,42 @@ _MAGIKA_LABEL_TO_MIME: dict[str, str] = {
     "bmp": "image/bmp",
 }
 
+_KNOWN_DOC_MIMES = frozenset(_EXT_TO_MIME.values()) | frozenset(_MAGIKA_LABEL_TO_MIME.values())
+# Trust Magika over a .html/.htm suffix only for binary/document types (PDF, Office, images, mail).
+_HTML_TRUST_MAGIKA_MIMES = _KNOWN_DOC_MIMES - _TEXTUAL_MIMES
+
+
+def _prefer_html_extension(detected_mime: str, ext: str, ext_mime: str | None) -> bool:
+    """Magika often mislabels HTML as txt, erb/ruby, php, or other source types."""
+    return (
+        ext in _HTML_EXTENSIONS
+        and ext_mime == "text/html"
+        and detected_mime != "text/html"
+        and detected_mime not in _HTML_TRUST_MAGIKA_MIMES
+    )
+
+
+def _resolve_detected_mime(
+    detected_mime: str, ext: str, ext_mime: str | None, *, path_name: str
+) -> str:
+    if _prefer_html_extension(detected_mime, ext, ext_mime):
+        log.debug(
+            "Preferring extension MIME for HTML: %s magika=%s ext=%s",
+            path_name,
+            detected_mime,
+            ext,
+        )
+        return ext_mime or detected_mime
+    if ext_mime and detected_mime not in _KNOWN_DOC_MIMES:
+        log.debug(
+            "Magika MIME %s is not a known type for %s; using extension %s",
+            detected_mime,
+            path_name,
+            ext_mime,
+        )
+        return ext_mime
+    return detected_mime
+
 
 def detect_mime(path: Path) -> str | None:
     """Detect MIME type of a file. Returns None if unrecognized."""
@@ -82,28 +126,14 @@ def detect_mime(path: Path) -> str | None:
         label = result.output.label
         mime = _MAGIKA_LABEL_TO_MIME.get(label)
         if mime:
-            if mime == "text/plain" and ext in _HTML_EXTENSIONS and ext_mime == "text/html":
-                log.debug(
-                    "Preferring extension MIME for HTML: %s label=%s ext=%s",
-                    path.name,
-                    label,
-                    ext,
-                )
-                return ext_mime
-            log.debug("Magika detected %s as %s (label=%s)", path.name, mime, label)
-            return mime
+            chosen = _resolve_detected_mime(mime, ext, ext_mime, path_name=path.name)
+            log.debug("Magika detected %s as %s (label=%s)", path.name, chosen, label)
+            return chosen
         if result.output.mime_type and result.output.mime_type != "application/octet-stream":
             raw_mime = str(result.output.mime_type)
-            if raw_mime == "text/plain" and ext in _HTML_EXTENSIONS and ext_mime == "text/html":
-                log.debug(
-                    "Preferring extension MIME for HTML: %s mime=%s ext=%s",
-                    path.name,
-                    raw_mime,
-                    ext,
-                )
-                return ext_mime
-            log.debug("Magika MIME fallback: %s → %s", path.name, result.output.mime_type)
-            return raw_mime
+            chosen = _resolve_detected_mime(raw_mime, ext, ext_mime, path_name=path.name)
+            log.debug("Magika MIME fallback: %s → %s", path.name, chosen)
+            return chosen
     except Exception:
         log.debug("Magika detection failed for %s, falling back to extension", path.name)
 

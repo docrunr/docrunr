@@ -14,9 +14,8 @@ const WORKER_HEALTH_URL = 'http://127.0.0.1:8080/health';
 const WORKER_LLM_HEALTH_URL = 'http://127.0.0.1:8081/health';
 const API_HEALTH_URL = 'http://127.0.0.1:8082/health';
 const LITELLM_HEALTH_URL = 'http://127.0.0.1:4000/health/liveliness';
-const UI_HOST = '127.0.0.1';
 const UI_PORT = 5173;
-const UI_URL = `http://${UI_HOST}:${UI_PORT}`;
+const UI_URL = `http://127.0.0.1:${UI_PORT}`;
 
 const LLM_MODE = !process.argv.includes('--no-llm');
 
@@ -71,8 +70,6 @@ async function main() {
     'ui',
     'run',
     'dev',
-    '--host',
-    UI_HOST,
     '--port',
     String(UI_PORT),
     '--strictPort',

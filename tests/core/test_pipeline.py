@@ -59,3 +59,20 @@ class TestProcessFile:
         assert "## Wat u moet weten" in result.markdown
         assert "Vraag: Begrijpen kost vertrekken." in result.markdown
         assert "Wolk kasteel vogel instrument." in result.markdown
+
+    def test_erb_like_html_is_processed_as_html(self, tmp_path: Path) -> None:
+        f = tmp_path / "templated.html"
+        f.write_text(
+            "<!DOCTYPE html>\n"
+            "<html><body>\n"
+            "<% if user %><h1>Hello visitor</h1><% end %>\n"
+            "<p>A paragraph of document content for extraction.</p>\n"
+            "</body></html>\n",
+            encoding="utf-8",
+        )
+        result = process_file(f)
+        assert result.ok, result.error
+        assert result.mime_type == "text/html"
+        assert result.parser in ("BeautifulSoupHtmlParser", "MarkItDownHtmlParser")
+        assert "Hello visitor" in result.markdown
+        assert "document content" in result.markdown
