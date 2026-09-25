@@ -17,6 +17,9 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "docling>=2.80.0",
     "pypdfium2>=4.0",
+    # Declared directly so [tool.uv.sources] can pin them to the CPU-only index
+    "torch",
+    "torchvision",
 ]
 
 [project.optional-dependencies]
