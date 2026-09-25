@@ -1,6 +1,6 @@
 [project]
 name = "docrunr-runtime"
-version = "0.2.0"
+version = "0.2.1"
 description = "Shared storage and messaging primitives for DocRunr services."
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11,<3.14"
