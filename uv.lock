@@ -869,7 +869,7 @@ standard = [
 
 [[package]]
 name = "docrunr"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "core" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -917,7 +917,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-api"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "api" }
 dependencies = [
     { name = "docrunr-runtime" },
@@ -940,7 +940,7 @@ requires-dist = [
 
 [[package]]
 name = "docrunr-runtime"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "runtime" }
 dependencies = [
     { name = "boto3" },
@@ -955,7 +955,7 @@ requires-dist = [
 
 [[package]]
 name = "docrunr-worker"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "worker" }
 dependencies = [
     { name = "boto3" },
@@ -991,7 +991,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-worker-llm"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "worker-llm" }
 dependencies = [
     { name = "boto3" },
@@ -1027,7 +1027,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "docrunr-workspace"
-version = "0.2.0"
+version = "0.2.1"
 source = { virtual = "." }
 dependencies = [
     { name = "docrunr" },
@@ -1481,7 +1481,7 @@ name = "jinxed"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon", marker = "sys_platform == 'win32'" },
+    { name = "ansicon" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3c/e9/96633f12b6829eb1e91e70e5846704c0b1293ec47bd65a7b681e19c8eeff/jinxed-1.4.0.tar.gz", hash = "sha256:8f7801a10799de39e509eb5abc6d131ee169c1ce4fd5d568aa85b5f56ed58068", size = 37169, upload-time = "2026-03-26T01:49:38.337Z" }
 wheels = [
@@ -1616,14 +1616,14 @@ wheels = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.10.3"
+version = "4.10.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e1/0c/af435d39d0a747bd528be9dfa6f3c6a8a9ed73e04672d5725adcc7005bfa/kreuzberg-4.10.3.tar.gz", hash = "sha256:42bff13de58058589389c0624f2a90b012a7304880f99a11c8a4a7b8feff61d0", size = 2245002, upload-time = "2026-09-05T18:21:48.089Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/46/e1b226760e91b519e929b44fae2d7d8e3f8db407b9006a294f18c7861be0/kreuzberg-4.10.4.tar.gz", hash = "sha256:d4b921972c5f0cdb471ddcb7e4a463c98d006132b3fbfc52607b5c9be0368ec1", size = 2246384, upload-time = "2026-09-21T06:11:08.184Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/f9/431c01a254110dd250bf8310c7b0bfd5db84bae5a1f2f90894c616c9a287/kreuzberg-4.10.3-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:9fa304dd3bd62338c2a62dd59f96e4d33ef330c0b9d504fec3b2290dae10a579", size = 31154136, upload-time = "2026-09-05T18:21:37.214Z" },
-    { url = "https://files.pythonhosted.org/packages/fa/df/1c0915c5f374c09c62d610c84d62c4c9849528e24041dcdf3f32c444e1ed/kreuzberg-4.10.3-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:9cc4de332f2fed6f25e421bc6c68bd0fb5a0ec706dc82e571f88217f48977987", size = 36392110, upload-time = "2026-09-05T18:21:40.011Z" },
-    { url = "https://files.pythonhosted.org/packages/a6/7d/a2c066fdbd3547a7907b22431f2c5fc9149a19ddd35646617990e7f6da6d/kreuzberg-4.10.3-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:d64a8be24f1d188653ff6e33ae1c2446d8294082d3e1efe20013288b2a5ed6b8", size = 38742714, upload-time = "2026-09-05T18:21:42.556Z" },
-    { url = "https://files.pythonhosted.org/packages/84/29/e89549052a38c4f3bbb98eeb90745c6a00e93b4ee923115d30f760ebe96e/kreuzberg-4.10.3-cp310-abi3-win_amd64.whl", hash = "sha256:eaa7ca69ca0e4ba893a20c98ad086683d90eb05e425a4894719059eb950b38a0", size = 36446601, upload-time = "2026-09-05T18:21:45.628Z" },
+    { url = "https://files.pythonhosted.org/packages/91/31/82d974e926093a98b7e15a426ccd6d7118c768969fbf630833c0e8ddaf9f/kreuzberg-4.10.4-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:d4985f90ddefce970dc3074a26ca0d748b1238c553b042eebb60e9ad58411220", size = 31349553, upload-time = "2026-09-21T06:10:55.874Z" },
+    { url = "https://files.pythonhosted.org/packages/50/1f/08d0295e56dba9bd56270239669a3a55aa272d0f240b7eaaea365b5ccae6/kreuzberg-4.10.4-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:6dcf59bdf18aa210a6cc4379826e0c907e588bac0dab4a81b4b8426f36d2b707", size = 36631458, upload-time = "2026-09-21T06:10:59.378Z" },
+    { url = "https://files.pythonhosted.org/packages/06/60/c73891ea355f34562d6529ed16d78b6cd8801ed01211fecd931f9b6e85c1/kreuzberg-4.10.4-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:08c3c2af91648c84e8af5ce1973307d01c33f400096cf78bec44742f02b6583e", size = 39018490, upload-time = "2026-09-21T06:11:02.919Z" },
+    { url = "https://files.pythonhosted.org/packages/47/63/10cb418d88bde8d12f4bd055a7a3a251bcdd4d4d4fafcfdda8c6164849d2/kreuzberg-4.10.4-cp310-abi3-win_amd64.whl", hash = "sha256:3bc0c9efee539c2df06dffe9165884c1d090d0a045c59a7e1161636302fc2aa4", size = 36672682, upload-time = "2026-09-21T06:11:05.59Z" },
 ]
 
 [[package]]
@@ -3507,8 +3507,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", marker = "sys_platform != 'darwin' and sys_platform != 'win32'" },
-    { name = "jeepney", marker = "sys_platform != 'darwin' and sys_platform != 'win32'" },
+    { name = "cryptography" },
+    { name = "jeepney" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -3677,8 +3677,8 @@ name = "standard-aifc"
 version = "3.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "audioop-lts", marker = "python_full_version >= '3.13'" },
-    { name = "standard-chunk", marker = "python_full_version >= '3.13'" },
+    { name = "audioop-lts" },
+    { name = "standard-chunk" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/53/6050dc3dde1671eb3db592c13b55a8005e5040131f7509cef0215212cb84/standard_aifc-3.13.0.tar.gz", hash = "sha256:64e249c7cb4b3daf2fdba4e95721f811bde8bdfc43ad9f936589b7bb2fae2e43", size = 15240, upload-time = "2024-10-30T16:01:31.772Z" }
 wheels = [
@@ -3857,13 +3857,13 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform == 'darwin'" },
-    { name = "fsspec", marker = "sys_platform == 'darwin'" },
-    { name = "jinja2", marker = "sys_platform == 'darwin'" },
-    { name = "networkx", marker = "sys_platform == 'darwin'" },
-    { name = "setuptools", marker = "sys_platform == 'darwin'" },
-    { name = "sympy", marker = "sys_platform == 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform == 'darwin'" },
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:1040f689e560ba6e02a0a147dfb9ec8dfdd3e4486ebec4b24dc8fdaa258fa9ba", upload-time = "2026-09-02T00:26:07Z" },
@@ -3884,13 +3884,13 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform != 'darwin'" },
-    { name = "fsspec", marker = "sys_platform != 'darwin'" },
-    { name = "jinja2", marker = "sys_platform != 'darwin'" },
-    { name = "networkx", marker = "sys_platform != 'darwin'" },
-    { name = "setuptools", marker = "sys_platform != 'darwin'" },
-    { name = "sympy", marker = "sys_platform != 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform != 'darwin'" },
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-linux_s390x.whl", hash = "sha256:3fa39713d13f23563ad11636bfff76b677ab4addbc240c54e6b7e47622e8973d", upload-time = "2026-09-02T18:31:08Z" },
@@ -3920,9 +3920,9 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform == 'darwin'" },
-    { name = "pillow", marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" } },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:d12e98ab22e2763607203a6f4077ca68f435148989a576cc0f736cf3720aa69b", upload-time = "2026-09-02T00:27:49Z" },
@@ -3943,9 +3943,9 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform != 'darwin'" },
-    { name = "pillow", marker = "sys_platform != 'darwin'" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "numpy" },
+    { name = "pillow" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" } },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:8013771465280b282306d4f037e4358551fb232ff621d99b2bc971c4f77a8f7e", upload-time = "2026-09-02T00:27:42Z" },
