@@ -179,7 +179,10 @@ def parse_image_with_tesseract(path: Path) -> str:
     language = _select_tesseract_language(prefix)
     png_bytes = preprocess_image_for_ocr(path)
     config = ExtractionConfig(
-        output_format="markdown",
+        # markdown joins OCR lines into one paragraph; plain keeps receipt/UI structure
+        output_format="plain",
+        # Kreuzberg would otherwise persist OCR text under ~/.cache/kreuzberg
+        use_cache=False,
         ocr=OcrConfig(backend="tesseract", language=language),
     )
     result = extract_bytes_sync(png_bytes, "image/png", config=config)

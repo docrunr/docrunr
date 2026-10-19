@@ -130,6 +130,8 @@ class TestProcessFile:
         assert "aanmelden" in markdown
         assert "wachtwoord" in markdown
         assert "succesvol" in markdown
+        lines = [line.strip() for line in result.markdown.splitlines() if line.strip()]
+        assert len(lines) >= 3
 
     @_SKIP_NO_TESSDATA
     def test_english_ui_screenshot_uses_tesseract(self) -> None:
@@ -141,6 +143,8 @@ class TestProcessFile:
         markdown = result.markdown.lower()
         assert "sign in" in markdown
         assert "password" in markdown
+        lines = [line.strip() for line in result.markdown.splitlines() if line.strip()]
+        assert len(lines) >= 3
 
     @_SKIP_NO_TESSDATA
     def test_receipt_jpeg_uses_tesseract(self) -> None:
@@ -152,3 +156,5 @@ class TestProcessFile:
         markdown = result.markdown.lower()
         assert "espresso" in markdown
         assert "croissant" in markdown
+        lines = [line.strip() for line in result.markdown.splitlines() if line.strip()]
+        assert len(lines) >= 3

@@ -202,7 +202,11 @@ class TestTesseractImageConverter:
 
         assert text == "Hello OCR"
         mock_ocr.assert_called_once_with(backend="tesseract", language="eng+nld")
-        mock_config.assert_called_once_with(output_format="markdown", ocr="ocr")
+        mock_config.assert_called_once_with(
+            output_format="plain",
+            use_cache=False,
+            ocr="ocr",
+        )
         args, kwargs = mock_extract.call_args
         assert args[1] == "image/png"
         assert kwargs["config"] is cfg
@@ -222,13 +226,18 @@ class TestTesseractImageConverter:
 
         with (
             patch("kreuzberg.OcrConfig", return_value="ocr") as mock_ocr,
-            patch("kreuzberg.ExtractionConfig", return_value=object()),
+            patch("kreuzberg.ExtractionConfig", return_value=object()) as mock_config,
             patch("kreuzberg.extract_bytes_sync", return_value=SimpleNamespace(content="Hello")),
         ):
             text = parse_image_with_tesseract(sample)
 
         assert text == "Hello"
         mock_ocr.assert_called_once_with(backend="tesseract", language="eng")
+        mock_config.assert_called_once_with(
+            output_format="plain",
+            use_cache=False,
+            ocr="ocr",
+        )
 
     def test_raises_on_empty_tesseract_output(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
