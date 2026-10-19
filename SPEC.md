@@ -70,6 +70,8 @@ DocRunr supports every file type that its extraction engines can handle. The ful
 | Images       | `.jpg`, `.jpeg`, `.png`, `.tiff`, `.bmp`          |
 
 
+Images are OCR'd first with Tesseract via Kreuzberg (English + Dutch). Docling is the fallback when Tesseract is missing, fails, or scores below the quality gate.
+
 File type detection is content-based via Magika, not extension-based.
 
 Unsupported files are skipped with a clear message.
@@ -258,6 +260,8 @@ The parser contract is intentionally simple:
 
 If a parser fails, the next one runs. If all fail, the file is recorded as failed. The user never picks a parser — the registry handles it.
 
+Image MIME types try `TesseractImageParser` first (priority 5), then `DoclingImageParser` (priority 10), the same fallback pattern as Kreuzberg-first Office extraction.
+
 ---
 
 ## 10. Quality Gate
@@ -322,17 +326,18 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 ### Core
 
 
-| Library          | Purpose                        | License    |
-| ---------------- | ------------------------------ | ---------- |
-| `docling`        | Layout-aware document parsing  | MIT        |
-| `markitdown`     | Office and web extraction      | MIT        |
-| `kreuzberg`      | Legacy Office + ODT extraction | MIT        |
-| `magika`         | Content-based type detection   | Apache 2.0 |
-| `pypdfium2`      | Fast PDF text extraction       | Apache 2.0 |
-| `tiktoken`       | Token counting                 | MIT        |
-| `beautifulsoup4` | HTML parsing                   | MIT        |
-| `typer`          | CLI framework                  | MIT        |
-| `rich`           | Terminal output and progress   | MIT        |
+| Library          | Purpose                                      | License    |
+| ---------------- | -------------------------------------------- | ---------- |
+| `docling`        | Layout-aware parsing; image OCR fallback     | MIT        |
+| `markitdown`     | Office and web extraction                    | MIT        |
+| `kreuzberg`      | Legacy Office + ODT; Tesseract image OCR     | MIT        |
+| `pillow`         | Image preprocess for OCR                     | HPND       |
+| `magika`         | Content-based type detection                 | Apache 2.0 |
+| `pypdfium2`      | Fast PDF text extraction                     | Apache 2.0 |
+| `tiktoken`       | Token counting                               | MIT        |
+| `beautifulsoup4` | HTML parsing                                 | MIT        |
+| `typer`          | CLI framework                                | MIT        |
+| `rich`           | Terminal output and progress                 | MIT        |
 
 
 ### Worker
@@ -346,6 +351,8 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 
 
 **Package management:** uv
+
+Docker and CI install system `tesseract-ocr` plus `tesseract-ocr-eng` and `tesseract-ocr-nld` language data (no `.traineddata` files in git). `TESSDATA_PREFIX` points Kreuzberg's bundled `libtesseract` at that tessdata directory.
 
 If a parser's dependency is not installed, that parser is skipped silently. No import errors. No crashes.
 

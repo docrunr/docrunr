@@ -57,12 +57,18 @@ LABEL org.opencontainers.image.description="Document to clean Markdown and chunk
 LABEL org.opencontainers.image.source="https://github.com/docrunr/docrunr"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-# Minimal runtime fonts used by extraction engines
+# Runtime fonts and Tesseract language data used by extraction engines
 RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     fonts-dejavu-core \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-nld \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Kreuzberg's bundled libtesseract reads traineddata from TESSDATA_PREFIX
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # Non-root user
 RUN groupadd --gid 1000 docrunr \
@@ -103,6 +109,18 @@ ENV TRANSFORMERS_OFFLINE=1
 
 # Smoke-test
 RUN python -c "import docrunr_worker; print('DocRunr loaded')"
+RUN python -c "\
+from pathlib import Path; \
+from PIL import Image, ImageDraw, ImageFont; \
+from docrunr.parsers._converters import parse_image_with_tesseract; \
+font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 32); \
+img = Image.new('RGB', (720, 120), 'white'); \
+ImageDraw.Draw(img).text((16, 36), 'DocRunr OCR smoke test', font=font, fill='black'); \
+path = Path('/tmp/ocr_smoke.png'); \
+img.save(path); \
+text = parse_image_with_tesseract(path); \
+assert text.strip(), 'Tesseract returned empty OCR'; \
+print('tesseract: ok', repr(text[:80]))"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import os, urllib.request; p=os.environ.get('HEALTH_PORT', '8080'); urllib.request.urlopen(f'http://localhost:{p}/health')" || exit 1

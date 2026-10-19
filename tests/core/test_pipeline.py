@@ -3,8 +3,28 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
+from docrunr.parsers._converters import _ensure_tessdata_prefix
 from docrunr.pipeline import process_file
+from PIL import Image
+
+SAMPLES_DIR = Path(__file__).parent.parent / "samples"
+
+
+def _tessdata_ready() -> bool:
+    prefix = _ensure_tessdata_prefix()
+    if prefix is None:
+        return False
+    root = Path(prefix)
+    return (root / "eng.traineddata").is_file() and (root / "nld.traineddata").is_file()
+
+
+_SKIP_NO_TESSDATA = pytest.mark.skipif(
+    not _tessdata_ready(),
+    reason="Tesseract tessdata (eng+nld) is not installed",
+)
 
 
 class TestProcessFile:
@@ -76,3 +96,62 @@ class TestProcessFile:
         assert result.parser in ("BeautifulSoupHtmlParser", "MarkItDownHtmlParser")
         assert "Hello visitor" in result.markdown
         assert "document content" in result.markdown
+
+    def test_image_falls_back_to_docling_when_tesseract_fails(self, tmp_path: Path) -> None:
+        sample = tmp_path / "shot.png"
+        Image.new("RGB", (64, 48), "white").save(sample)
+        fallback = (
+            "# Fallback screenshot\n\n"
+            "Docling recovered this screenshot text after Tesseract failed to run.\n"
+        )
+
+        with (
+            patch(
+                "docrunr.parsers._converters.parse_image_with_tesseract",
+                side_effect=RuntimeError("tesseract unavailable"),
+            ),
+            patch(
+                "docrunr.parsers._converters.parse_with_docling",
+                return_value=fallback,
+            ),
+        ):
+            result = process_file(sample)
+
+        assert result.ok, result.error
+        assert result.mime_type == "image/png"
+        assert result.parser == "DoclingImageParser"
+        assert "Docling recovered this screenshot" in result.markdown
+
+    @_SKIP_NO_TESSDATA
+    def test_dutch_ui_screenshot_uses_tesseract(self) -> None:
+        sample = SAMPLES_DIR / "image" / "ui_screenshot_nl.png"
+        result = process_file(sample)
+        assert result.ok, result.error
+        assert result.mime_type == "image/png"
+        assert result.parser == "TesseractImageParser"
+        markdown = result.markdown.lower()
+        assert "aanmelden" in markdown
+        assert "wachtwoord" in markdown
+        assert "succesvol" in markdown
+
+    @_SKIP_NO_TESSDATA
+    def test_english_ui_screenshot_uses_tesseract(self) -> None:
+        sample = SAMPLES_DIR / "image" / "ui_screenshot_en.png"
+        result = process_file(sample)
+        assert result.ok, result.error
+        assert result.mime_type == "image/png"
+        assert result.parser == "TesseractImageParser"
+        markdown = result.markdown.lower()
+        assert "sign in" in markdown
+        assert "password" in markdown
+
+    @_SKIP_NO_TESSDATA
+    def test_receipt_jpeg_uses_tesseract(self) -> None:
+        sample = SAMPLES_DIR / "image" / "receipt_scan.jpg"
+        result = process_file(sample)
+        assert result.ok, result.error
+        assert result.mime_type == "image/jpeg"
+        assert result.parser == "TesseractImageParser"
+        markdown = result.markdown.lower()
+        assert "espresso" in markdown
+        assert "croissant" in markdown
