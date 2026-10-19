@@ -94,6 +94,15 @@ def _ensure_tessdata_prefix() -> str | None:
     return None
 
 
+def _select_tesseract_language(prefix: str | None) -> str:
+    """Use eng+nld when Dutch traineddata is installed, else fall back to eng."""
+    if prefix is not None:
+        root = Path(prefix)
+        if (root / "eng.traineddata").is_file() and not (root / "nld.traineddata").is_file():
+            return "eng"
+    return "eng+nld"
+
+
 def _flatten_alpha_on_white(img: Any) -> Any:
     from PIL import Image
 
@@ -136,11 +145,12 @@ def parse_image_with_tesseract(path: Path) -> str:
     """OCR an image via Kreuzberg/Tesseract. Raises on empty output."""
     from kreuzberg import ExtractionConfig, OcrConfig, extract_bytes_sync
 
-    _ensure_tessdata_prefix()
+    prefix = _ensure_tessdata_prefix()
+    language = _select_tesseract_language(prefix)
     png_bytes = preprocess_image_for_ocr(path)
     config = ExtractionConfig(
         output_format="markdown",
-        ocr=OcrConfig(backend="tesseract", language="eng+nld"),
+        ocr=OcrConfig(backend="tesseract", language=language),
     )
     result = extract_bytes_sync(png_bytes, "image/png", config=config)
     text: str = result.content

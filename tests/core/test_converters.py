@@ -76,6 +76,12 @@ def _save_rgb(
     Image.new("RGB", size, color).save(path)
 
 
+def _clear_tessdata_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure TESSDATA_PREFIX is unset for the test and restored on teardown."""
+    monkeypatch.setenv("TESSDATA_PREFIX", "")
+    monkeypatch.delenv("TESSDATA_PREFIX")
+
+
 class TestTessdataPrefix:
     def test_does_not_overwrite_existing_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("TESSDATA_PREFIX", "/already/set")
@@ -84,7 +90,7 @@ class TestTessdataPrefix:
     def test_skips_directory_without_traineddata(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+        _clear_tessdata_env(monkeypatch)
         empty = tmp_path / "empty"
         empty.mkdir()
         good = tmp_path / "good"
@@ -97,7 +103,7 @@ class TestTessdataPrefix:
     def test_returns_none_when_no_traineddata(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+        _clear_tessdata_env(monkeypatch)
         empty = tmp_path / "empty"
         empty.mkdir()
         with patch("docrunr.parsers._converters._TESSDATA_CANDIDATES", (empty,)):
@@ -150,7 +156,15 @@ class TestImagePreprocess:
 
 
 class TestTesseractImageConverter:
-    def test_calls_extract_bytes_sync_with_tesseract_ocr(self, tmp_path: Path) -> None:
+    def test_calls_extract_bytes_sync_with_tesseract_ocr(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tessdata = tmp_path / "tessdata"
+        tessdata.mkdir()
+        (tessdata / "eng.traineddata").write_bytes(b"data")
+        (tessdata / "nld.traineddata").write_bytes(b"data")
+        monkeypatch.setenv("TESSDATA_PREFIX", str(tessdata))
+
         sample = tmp_path / "shot.png"
         _save_rgb(sample, (64, 48))
         cfg = object()
@@ -172,7 +186,31 @@ class TestTesseractImageConverter:
         assert isinstance(args[0], bytes)
         assert args[0].startswith(b"\x89PNG\r\n\x1a\n")
 
-    def test_raises_on_empty_tesseract_output(self, tmp_path: Path) -> None:
+    def test_falls_back_to_eng_when_nld_traineddata_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        tessdata = tmp_path / "tessdata"
+        tessdata.mkdir()
+        (tessdata / "eng.traineddata").write_bytes(b"data")
+        monkeypatch.setenv("TESSDATA_PREFIX", str(tessdata))
+
+        sample = tmp_path / "shot.png"
+        _save_rgb(sample, (64, 48))
+
+        with (
+            patch("kreuzberg.OcrConfig", return_value="ocr") as mock_ocr,
+            patch("kreuzberg.ExtractionConfig", return_value=object()),
+            patch("kreuzberg.extract_bytes_sync", return_value=SimpleNamespace(content="Hello")),
+        ):
+            text = parse_image_with_tesseract(sample)
+
+        assert text == "Hello"
+        mock_ocr.assert_called_once_with(backend="tesseract", language="eng")
+
+    def test_raises_on_empty_tesseract_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _clear_tessdata_env(monkeypatch)
         sample = tmp_path / "shot.png"
         _save_rgb(sample, (64, 48))
 

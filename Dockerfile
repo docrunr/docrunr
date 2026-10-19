@@ -119,6 +119,7 @@ ImageDraw.Draw(img).text((16, 36), 'DocRunr OCR smoke test', font=font, fill='bl
 path = Path('/tmp/ocr_smoke.png'); \
 img.save(path); \
 text = parse_image_with_tesseract(path); \
+path.unlink(missing_ok=True); \
 assert text.strip(), 'Tesseract returned empty OCR'; \
 print('tesseract: ok', repr(text[:80]))"
 
