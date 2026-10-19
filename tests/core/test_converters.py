@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +11,8 @@ from unittest.mock import call, patch
 import pytest
 from docrunr.parsers._converters import (
     _ensure_tessdata_prefix,
+    _find_tessdata_dir,
+    _select_tesseract_language,
     parse_image_with_tesseract,
     parse_with_kreuzberg,
     preprocess_image_for_ocr,
@@ -108,6 +111,26 @@ class TestTessdataPrefix:
         empty.mkdir()
         with patch("docrunr.parsers._converters._TESSDATA_CANDIDATES", (empty,)):
             assert _ensure_tessdata_prefix() is None
+
+    def test_find_does_not_mutate_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _clear_tessdata_env(monkeypatch)
+        good = tmp_path / "good"
+        good.mkdir()
+        (good / "eng.traineddata").write_bytes(b"data")
+        with patch("docrunr.parsers._converters._TESSDATA_CANDIDATES", (good,)):
+            assert _find_tessdata_dir() == good
+        assert "TESSDATA_PREFIX" not in os.environ
+
+    def test_language_resolves_parent_tessdata_prefix(self, tmp_path: Path) -> None:
+        prefix = tmp_path / "tesseract"
+        tessdata = prefix / "tessdata"
+        tessdata.mkdir(parents=True)
+        (tessdata / "eng.traineddata").write_bytes(b"data")
+        assert _select_tesseract_language(str(prefix)) == "eng"
+        (tessdata / "nld.traineddata").write_bytes(b"data")
+        assert _select_tesseract_language(str(prefix)) == "eng+nld"
 
 
 class TestImagePreprocess:

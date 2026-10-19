@@ -81,25 +81,55 @@ def parse_with_kreuzberg(path: Path, mime_type: str | None = None) -> str:
     return text
 
 
+def _tessdata_dir(prefix: str | None) -> Path | None:
+    """Resolve a TESSDATA_PREFIX value to the directory that holds eng.traineddata.
+
+    Accepts both the tessdata directory itself and Tesseract's documented parent
+    prefix (``$TESSDATA_PREFIX/tessdata``).
+    """
+    if not prefix:
+        return None
+    root = Path(prefix)
+    if (root / "eng.traineddata").is_file():
+        return root
+    nested = root / "tessdata"
+    if (nested / "eng.traineddata").is_file():
+        return nested
+    return None
+
+
+def _find_tessdata_dir() -> Path | None:
+    """Locate system tessdata without requiring or mutating TESSDATA_PREFIX."""
+    found = _tessdata_dir(os.environ.get("TESSDATA_PREFIX"))
+    if found is not None:
+        return found
+    if os.environ.get("TESSDATA_PREFIX"):
+        return None
+    for candidate in _TESSDATA_CANDIDATES:
+        found = _tessdata_dir(str(candidate))
+        if found is not None:
+            return found
+    return None
+
+
 def _ensure_tessdata_prefix() -> str | None:
     """Point Kreuzberg's bundled libtesseract at system traineddata when unset."""
     existing = os.environ.get("TESSDATA_PREFIX")
     if existing:
         return existing
-    for candidate in _TESSDATA_CANDIDATES:
-        if candidate.is_dir() and (candidate / "eng.traineddata").is_file():
-            resolved = str(candidate)
-            os.environ["TESSDATA_PREFIX"] = resolved
-            return resolved
-    return None
+    found = _find_tessdata_dir()
+    if found is None:
+        return None
+    resolved = str(found)
+    os.environ["TESSDATA_PREFIX"] = resolved
+    return resolved
 
 
 def _select_tesseract_language(prefix: str | None) -> str:
     """Use eng+nld when Dutch traineddata is installed, else fall back to eng."""
-    if prefix is not None:
-        root = Path(prefix)
-        if (root / "eng.traineddata").is_file() and not (root / "nld.traineddata").is_file():
-            return "eng"
+    root = _tessdata_dir(prefix)
+    if root is not None and not (root / "nld.traineddata").is_file():
+        return "eng"
     return "eng+nld"
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from docrunr.parsers._converters import _ensure_tessdata_prefix
+from docrunr.parsers._converters import _find_tessdata_dir
 from docrunr.pipeline import process_file
 from PIL import Image
 
@@ -14,11 +14,8 @@ SAMPLES_DIR = Path(__file__).parent.parent / "samples"
 
 
 def _tessdata_ready() -> bool:
-    prefix = _ensure_tessdata_prefix()
-    if prefix is None:
-        return False
-    root = Path(prefix)
-    return (root / "eng.traineddata").is_file() and (root / "nld.traineddata").is_file()
+    root = _find_tessdata_dir()
+    return root is not None and (root / "nld.traineddata").is_file()
 
 
 _SKIP_NO_TESSDATA = pytest.mark.skipif(
