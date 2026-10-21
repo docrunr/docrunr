@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from docrunr.parsers.registry import get_parsers, supported_mime_types
 
 
@@ -40,3 +41,13 @@ class TestRegistry:
     def test_legacy_ppt_has_parsers(self) -> None:
         parsers = get_parsers("application/vnd.ms-powerpoint")
         assert len(parsers) >= 1
+
+    @pytest.mark.parametrize(
+        "mime",
+        ["image/png", "image/jpeg", "image/tiff", "image/bmp"],
+    )
+    def test_images_prefer_tesseract_then_docling(self, mime: str) -> None:
+        parsers = get_parsers(mime)
+        names = [p.__class__.__name__ for p in parsers]
+        assert names[0] == "TesseractImageParser"
+        assert names[1] == "DoclingImageParser"

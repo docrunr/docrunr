@@ -17,7 +17,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.16.8",
     "mypy>=2.3.1",
-    "skylos>=4.37.0",
+    "skylos>=4.50.1",
     "types-psutil>=5.9",
 ]
 

@@ -2,7 +2,7 @@
 
 from .email import EmlParser, MsgParser
 from .html_parser import BeautifulSoupHtmlParser, MarkItDownHtmlParser
-from .image import DoclingImageParser
+from .image import DoclingImageParser, TesseractImageParser
 from .office import (
     DoclingOfficeParser,
     KreuzbergOfficeParser,
@@ -26,5 +26,6 @@ __all__ = [
     "MsgParser",
     "PlainTextParser",
     "PypdfiumParser",
+    "TesseractImageParser",
     "XmlParser",
 ]

@@ -14,6 +14,7 @@ dependencies = [
     "tiktoken>=0.12",
     "markitdown[all]>=0.1.5",
     "kreuzberg>=4.10.3",
+    "pillow>=10.0",
     "beautifulsoup4>=4.12",
     "docling>=2.80.0",
     "pypdfium2>=4.0",

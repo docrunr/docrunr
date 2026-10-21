@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --dev
 
+      - name: Install Tesseract OCR
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld
+
       - name: Lint
         run: UV_CACHE_DIR=.uv-cache uv run ruff check .
 
@@ -44,6 +47,8 @@ jobs:
         run: UV_CACHE_DIR=.uv-cache uv run mypy runtime/src/docrunr_runtime api/src/docrunr_api
 
       - name: Tests
+        env:
+          TESSDATA_PREFIX: /usr/share/tesseract-ocr/5/tessdata
         run: UV_CACHE_DIR=.uv-cache uv run pytest -q
 
       - name: Set up Node
