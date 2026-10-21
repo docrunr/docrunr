@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'win32'",
@@ -1074,7 +1074,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.16.8" },
-    { name = "skylos", specifier = ">=4.37.0" },
+    { name = "skylos", specifier = ">=4.50.1" },
     { name = "types-psutil", specifier = ">=5.9" },
 ]
 
@@ -1529,7 +1529,7 @@ name = "jinxed"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon" },
+    { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3c/e9/96633f12b6829eb1e91e70e5846704c0b1293ec47bd65a7b681e19c8eeff/jinxed-1.4.0.tar.gz", hash = "sha256:8f7801a10799de39e509eb5abc6d131ee169c1ce4fd5d568aa85b5f56ed58068", size = 37169, upload-time = "2026-03-26T01:49:38.337Z" }
 wheels = [
@@ -3563,8 +3563,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform != 'darwin' and sys_platform != 'win32'" },
+    { name = "jeepney", marker = "sys_platform != 'darwin' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -3656,7 +3656,7 @@ wheels = [
 
 [[package]]
 name = "skylos"
-version = "4.40.0"
+version = "4.50.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ca9" },
@@ -3665,6 +3665,7 @@ dependencies = [
     { name = "libcst" },
     { name = "mcp" },
     { name = "networkx" },
+    { name = "packaging" },
     { name = "pyperclip" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -3672,16 +3673,21 @@ dependencies = [
     { name = "textual" },
     { name = "tree-sitter" },
     { name = "tree-sitter-cpp" },
-    { name = "tree-sitter-dart-orchard" },
     { name = "tree-sitter-go" },
     { name = "tree-sitter-java" },
     { name = "tree-sitter-php" },
     { name = "tree-sitter-rust" },
     { name = "tree-sitter-typescript" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/40/cd/312686b1950dfa1d72643f5aa211a875f2d0a967396bc3ac0a661792f77e/skylos-4.40.0.tar.gz", hash = "sha256:5da31f0c86f257da95b150e49952eeeaff00de9585370ba56e5456df2d936dab", size = 3139728, upload-time = "2026-09-28T01:43:09.265Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/47/4692bf0b6892e420dd5ceeaab6ee666c6c43b6667aa2d5b25aa43b79e56b/skylos-4.50.1.tar.gz", hash = "sha256:482c837a43c26aa9b264127b0b03e9c537f976ec21cc6329edc5f46b39a240be", size = 4482753, upload-time = "2026-10-15T10:18:16.201Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/13/b3ac7c462d3d2e64a2d2de8246846a09cbe4db420e09bda9e91a3598c010/skylos-4.40.0-py3-none-any.whl", hash = "sha256:2d5801bd0ac5b1e46f488c6db30b7a6da37ffee5ad01b0ba0814fc801146cbe6", size = 2209946, upload-time = "2026-09-28T01:43:07.675Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/21/3c8c1cb8bb0e365158d9249db7f6c19c549ca59335b5e14969d51ba4c3fb/skylos-4.50.1-py3-none-any.whl", hash = "sha256:f644f5a6cf108f7f855a957eca4904e1e5a39f5c4fd7e2e97b1f52a4aefeb21c", size = 3076005, upload-time = "2026-10-15T10:18:00.977Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/b7/2c306ec1aab435c13bf5326eddeffbe95a667cb91aa9ddecea5ca570553f/skylos-4.50.1-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:4d54663a577b19e4e154e77de9a278d6521a479db0112e1eed04eee891050ae0", size = 5091099, upload-time = "2026-10-15T10:18:03.347Z" },
+    { url = "https://files.pythonhosted.org/packages/55/8a/f4fb2c8636a21ab1aae6269e5ee2d82449be669e2572e7c5f807a2efd6d2/skylos-4.50.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:c0db20cadb5c566adddadbe7dffddf51508b7c053edacf680a5f612f9b22de57", size = 4960033, upload-time = "2026-10-15T10:18:05.36Z" },
+    { url = "https://files.pythonhosted.org/packages/02/7a/6d926b4db58397e83755c68cd132d5456a03f0250dbd47cdf975568a5a96/skylos-4.50.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:94b9c9b786ab46baf01e3752a62c2bbbabc90472bd53042f3eed9c191e3126e5", size = 4903797, upload-time = "2026-10-15T10:18:07.451Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/04/42d7b5cc880ed68319c8967dfd685ff5c86addf57ddcfeaa59abcd884033/skylos-4.50.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:d7ab30485327ac6213b0da0c6e2deb5d9bd889a303de88e51dbe5c1b5494dce4", size = 5072298, upload-time = "2026-10-15T10:18:09.604Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/84/c15ffe52ab155f010fe3cea5cdf134ad3e6f744fd0cff4948369d72f33d0/skylos-4.50.1-py3-none-win_amd64.whl", hash = "sha256:465ee45a7ddd050dc489d13cc9e27307b8756819c65f575fd76f90986920a119", size = 5137334, upload-time = "2026-10-15T10:18:11.755Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/1e/22d5d5819ba12e74bf0932d9157f8528102c3529df271acf7c550b2adc31/skylos-4.50.1-py3-none-win_arm64.whl", hash = "sha256:1e3e18254adb7458e651e766f9557838b151950666275ffa29c75aacb3ddbb7e", size = 4941548, upload-time = "2026-10-15T10:18:14.334Z" },
 ]
 
 [[package]]
@@ -3734,8 +3740,8 @@ name = "standard-aifc"
 version = "3.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "audioop-lts" },
-    { name = "standard-chunk" },
+    { name = "audioop-lts", marker = "python_full_version >= '3.13'" },
+    { name = "standard-chunk", marker = "python_full_version >= '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/53/6050dc3dde1671eb3db592c13b55a8005e5040131f7509cef0215212cb84/standard_aifc-3.13.0.tar.gz", hash = "sha256:64e249c7cb4b3daf2fdba4e95721f811bde8bdfc43ad9f936589b7bb2fae2e43", size = 15240, upload-time = "2024-10-30T16:01:31.772Z" }
 wheels = [
@@ -3914,13 +3920,13 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx" },
-    { name = "setuptools" },
-    { name = "sympy" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "sys_platform == 'darwin'" },
+    { name = "fsspec", marker = "sys_platform == 'darwin'" },
+    { name = "jinja2", marker = "sys_platform == 'darwin'" },
+    { name = "networkx", marker = "sys_platform == 'darwin'" },
+    { name = "setuptools", marker = "sys_platform == 'darwin'" },
+    { name = "sympy", marker = "sys_platform == 'darwin'" },
+    { name = "typing-extensions", marker = "sys_platform == 'darwin'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:1040f689e560ba6e02a0a147dfb9ec8dfdd3e4486ebec4b24dc8fdaa258fa9ba", upload-time = "2026-09-02T00:26:07Z" },
@@ -3941,13 +3947,13 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx" },
-    { name = "setuptools" },
-    { name = "sympy" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "sys_platform != 'darwin'" },
+    { name = "fsspec", marker = "sys_platform != 'darwin'" },
+    { name = "jinja2", marker = "sys_platform != 'darwin'" },
+    { name = "networkx", marker = "sys_platform != 'darwin'" },
+    { name = "setuptools", marker = "sys_platform != 'darwin'" },
+    { name = "sympy", marker = "sys_platform != 'darwin'" },
+    { name = "typing-extensions", marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-linux_s390x.whl", hash = "sha256:3fa39713d13f23563ad11636bfff76b677ab4addbc240c54e6b7e47622e8973d", upload-time = "2026-09-02T18:31:08Z" },
@@ -3977,9 +3983,9 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" } },
+    { name = "numpy", marker = "sys_platform == 'darwin'" },
+    { name = "pillow", marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:d12e98ab22e2763607203a6f4077ca68f435148989a576cc0f736cf3720aa69b", upload-time = "2026-09-02T00:27:49Z" },
@@ -4000,9 +4006,9 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" } },
+    { name = "numpy", marker = "sys_platform != 'darwin'" },
+    { name = "pillow", marker = "sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:8013771465280b282306d4f037e4358551fb232ff621d99b2bc971c4f77a8f7e", upload-time = "2026-09-02T00:27:42Z" },
@@ -4107,12 +4113,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/37/7e/909e52b3dec09c475140b0e175511e275d0d00ba2dbd7c68102d377ae0f6/tree_sitter_cpp-0.23.4-cp39-abi3-win_amd64.whl", hash = "sha256:68606a45bea92669d155399e1239f771a7767d8683cd8f8e30e7d813107030ca", size = 290997, upload-time = "2024-11-11T06:59:22.432Z" },
     { url = "https://files.pythonhosted.org/packages/d4/6a/65435d4d1f4c735be7ffe52d7c2e7b8a7f7c2790343a2719c60c548611c8/tree_sitter_cpp-0.23.4-cp39-abi3-win_arm64.whl", hash = "sha256:712f84f18be94cbe2a148fa4fdf40fcf4a8c25a8f7670efb9f8a47ddec2fc281", size = 288203, upload-time = "2024-11-11T06:59:23.404Z" },
 ]
-
-[[package]]
-name = "tree-sitter-dart-orchard"
-version = "0.5.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fc/9d/937231872c7e83319a4a4d4989e99e53771bb031e611c06eb92996cd2cd0/tree_sitter_dart_orchard-0.5.0.tar.gz", hash = "sha256:be1f9186975af89f398bada111c9507f63b747accb13aebb5bd8c6ac2edc349d", size = 262611, upload-time = "2026-07-16T09:01:53.984Z" }
 
 [[package]]
 name = "tree-sitter-go"
