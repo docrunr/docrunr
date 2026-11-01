@@ -1,5 +1,5 @@
 # DocRunr API — lightweight HTTP gateway for the worker stack
-FROM python:3.13-slim AS builder
+FROM python:3.15-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY api/src/ ./api/src/
 COPY runtime/src/ ./runtime/src/
 RUN uv sync --frozen --no-dev --package docrunr-api
 
-FROM python:3.13-slim AS runtime
+FROM python:3.15-slim AS runtime
 
 ARG DOCRUNR_VERSION=
 LABEL org.opencontainers.image.title="DocRunr API"
