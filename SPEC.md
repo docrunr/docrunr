@@ -1,12 +1,12 @@
 # DocRunr Specification
 
-**You give it a document. It gives you clean Markdown and chunks. That's it.**
+**You give it a document. It gives you Markdown and chunks. That's it.**
 
 ---
 
 ## 1. What DocRunr Is
 
-DocRunr is a predictable document processing toolkit that converts documents into clean Markdown and structured text chunks ready for RAG pipelines. It works as a CLI, a Python library, and a scalable RabbitMQ worker with a bundled UI. An optional local public HTTP API (`docrunr-api`) is available for application integrations that prefer HTTP over publishing to RabbitMQ directly.
+DocRunr is a predictable document processing toolkit that converts documents into Markdown and structured text chunks ready for RAG pipelines. It works as a CLI, a Python library, and a scalable RabbitMQ worker with a bundled UI. An optional local public HTTP API (`docrunr-api`) is available for application integrations that prefer HTTP over publishing to RabbitMQ directly.
 
 It detects the file type, picks the best extraction strategy, cleans the Markdown, and splits it into structure-aware chunks. Zero configuration. No tuning. No knobs. It just works.
 
@@ -58,7 +58,6 @@ These are promises DocRunr makes. They do not change without a major version bum
 
 DocRunr supports every file type that its extraction engines can handle. The full list:
 
-
 | Category     | Formats                                           |
 | ------------ | ------------------------------------------------- |
 | PDF          | `.pdf`                                            |
@@ -68,7 +67,6 @@ DocRunr supports every file type that its extraction engines can handle. The ful
 | Text         | `.txt`, `.md`, `.csv`, `.json`, `.xml`            |
 | Email        | `.eml`, `.msg`                                    |
 | Images       | `.jpg`, `.jpeg`, `.png`, `.tiff`, `.bmp`          |
-
 
 Images are OCR'd first with Tesseract via Kreuzberg (English + Dutch). Docling is the fallback when Tesseract is missing, fails, or scores below the quality gate.
 
@@ -95,7 +93,6 @@ docrunr ./documents/
 
 ### Options
 
-
 | Option      | Short | Description                                |
 | ----------- | ----- | ------------------------------------------ |
 | `--out`     | `-o`  | Output directory (default: next to input)  |
@@ -104,18 +101,15 @@ docrunr ./documents/
 | `--workers` | `-w`  | Parallel workers for batch (0 = auto/CPUs) |
 | `--include` | `-i`  | Filter files by name, extension, or glob   |
 
-
 When processing a directory, the output mirrors the input directory structure.
 
 ### Exit Codes
-
 
 | Code | Meaning                     |
 | ---- | --------------------------- |
 | 0    | All files processed         |
 | 1    | Some files failed           |
 | 2    | Fatal error or bad argument |
-
 
 ---
 
@@ -288,7 +282,7 @@ Deterministic cleanup rules applied to every extraction:
 - Table cleanup
 - Unicode normalization
 
-**Rule:** If a transformation changes *what information* is present, it doesn't belong here. Cleaning changes *how* information is formatted, not *what* it says.
+**Rule:** If a transformation changes _what information_ is present, it doesn't belong here. Cleaning changes _how_ information is formatted, not _what_ it says.
 
 ---
 
@@ -304,14 +298,12 @@ Chunks are split at structural boundaries in this order of preference:
 2. Paragraphs (natural break points within sections)
 3. Sentence boundaries (only when a section exceeds token budget)
 
-
 | Parameter         | Value      |
 | ----------------- | ---------- |
 | Target size       | 300 tokens |
 | Hard max          | 450 tokens |
 | Token counter     | tiktoken   |
 | Recommended floor | 200 tokens |
-
 
 No overlap. No sliding window. Structure-preserving splits only.
 
@@ -325,30 +317,26 @@ Dependencies are expected to use permissive licenses suitable for redistribution
 
 ### Core
 
-
-| Library          | Purpose                                      | License    |
-| ---------------- | -------------------------------------------- | ---------- |
-| `docling`        | Layout-aware parsing; image OCR fallback     | MIT        |
-| `markitdown`     | Office and web extraction                    | MIT        |
-| `kreuzberg`      | Legacy Office + ODT; Tesseract image OCR     | MIT        |
-| `pillow`         | Image preprocess for OCR                     | HPND       |
-| `magika`         | Content-based type detection                 | Apache 2.0 |
-| `pypdfium2`      | Fast PDF text extraction                     | Apache 2.0 |
-| `tiktoken`       | Token counting                               | MIT        |
-| `beautifulsoup4` | HTML parsing                                 | MIT        |
-| `typer`          | CLI framework                                | MIT        |
-| `rich`           | Terminal output and progress                 | MIT        |
-
+| Library          | Purpose                                  | License    |
+| ---------------- | ---------------------------------------- | ---------- |
+| `docling`        | Layout-aware parsing; image OCR fallback | MIT        |
+| `markitdown`     | Office and web extraction                | MIT        |
+| `kreuzberg`      | Legacy Office + ODT; Tesseract image OCR | MIT        |
+| `pillow`         | Image preprocess for OCR                 | HPND       |
+| `magika`         | Content-based type detection             | Apache 2.0 |
+| `pypdfium2`      | Fast PDF text extraction                 | Apache 2.0 |
+| `tiktoken`       | Token counting                           | MIT        |
+| `beautifulsoup4` | HTML parsing                             | MIT        |
+| `typer`          | CLI framework                            | MIT        |
+| `rich`           | Terminal output and progress             | MIT        |
 
 ### Worker
-
 
 | Library             | Purpose                      | License    |
 | ------------------- | ---------------------------- | ---------- |
 | `pika`              | RabbitMQ client              | BSD        |
 | `pydantic-settings` | Env-based configuration      | MIT        |
 | `boto3`             | S3-compatible storage (opt.) | Apache 2.0 |
-
 
 **Package management:** uv
 
@@ -499,14 +487,12 @@ It is not a framework. It has no plugin system. It does ship with a bundled oper
 
 ### Queues
 
-
-| Queue               | Direction              | Purpose                                                                 |
-| ------------------- | ---------------------- | ----------------------------------------------------------------------- |
-| `docrunr.jobs`      | Publisher → Worker     | Job requests (web app, worker upload UI, or `docrunr-api`)              |
-| `docrunr.results`   | Worker → Consumer      | Processing results                                                      |
-| `docrunr.lifecycle` | Worker → API           | Optional `processing` transition when `RABBITMQ_LIFECYCLE_QUEUE` is set |
-| `docrunr.dlq`       | Worker → Operator      | Dead-lettered messages after bounded retries                            |
-
+| Queue               | Direction          | Purpose                                                                 |
+| ------------------- | ------------------ | ----------------------------------------------------------------------- |
+| `docrunr.jobs`      | Publisher → Worker | Job requests (web app, worker upload UI, or `docrunr-api`)              |
+| `docrunr.results`   | Worker → Consumer  | Processing results                                                      |
+| `docrunr.lifecycle` | Worker → API       | Optional `processing` transition when `RABBITMQ_LIFECYCLE_QUEUE` is set |
+| `docrunr.dlq`       | Worker → Operator  | Dead-lettered messages after bounded retries                            |
 
 All queues are durable. Messages use `delivery_mode=2` (persistent). The `docrunr.jobs` queue is a **priority queue**: declare it with `arguments: {"x-max-priority": 255}` and set AMQP `BasicProperties.priority` on published jobs to match the JSON payload (see below). `docrunr.results`, `docrunr.lifecycle`, and `docrunr.dlq` are standard queues without priority arguments.
 
@@ -609,13 +595,11 @@ LiteLLM proxy config lives in `litellm.yaml` at the repo root.
 
 ### Queues
 
-
-| Queue                 | Direction                | Purpose                |
-| --------------------- | ------------------------ | ---------------------- |
-| `docrunr.llm.jobs`    | Extraction → worker-llm  | LLM job intake         |
-| `docrunr.llm.results` | worker-llm → Consumer    | LLM job outcomes       |
-| `docrunr.llm.dlq`     | worker-llm → Operator    | Dead-lettered failures |
-
+| Queue                 | Direction               | Purpose                |
+| --------------------- | ----------------------- | ---------------------- |
+| `docrunr.llm.jobs`    | Extraction → worker-llm | LLM job intake         |
+| `docrunr.llm.results` | worker-llm → Consumer   | LLM job outcomes       |
+| `docrunr.llm.dlq`     | worker-llm → Operator   | Dead-lettered failures |
 
 All queues are durable with `delivery_mode=2`. Same retry and dead-letter semantics as the extraction worker.
 
@@ -660,18 +644,16 @@ Published by `worker-llm` to `docrunr.llm.results`:
 
 ### Configuration
 
-
 | Variable                    | Default               | Description                                                                                                                                             |
 | --------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LITELLM_BASE_URL`          | `http://litellm:4000` | LiteLLM proxy base URL (`localhost` / `127.0.0.1` is rewritten to `litellm` when `RABBITMQ_HOST` is `rabbitmq`, so a host `.env` does not break Docker) |
-| `LITELLM_API_KEY`           | *(empty)*             | API key for LiteLLM                                                                                                                                     |
+| `LITELLM_API_KEY`           | _(empty)_             | API key for LiteLLM                                                                                                                                     |
 | `LITELLM_TIMEOUT_SECONDS`   | `600`                 | Timeout per LiteLLM call (10 minutes)                                                                                                                   |
 | `RABBITMQ_LLM_QUEUE`        | `docrunr.llm.jobs`    | Consume queue                                                                                                                                           |
 | `RABBITMQ_LLM_RESULT_QUEUE` | `docrunr.llm.results` | Result queue                                                                                                                                            |
 | `RABBITMQ_LLM_DLQ_QUEUE`    | `docrunr.llm.dlq`     | Dead-letter queue                                                                                                                                       |
 | `HEALTH_PORT`               | `8080`                | HTTP listen port inside `worker-llm` (same as TXT; Compose keeps this at **8080** in Docker)                                                            |
 | `LLM_HEALTH_PORT`           | `8081`                | Compose-only: **host** port mapped to container **8080** for `worker-llm` (`LLM_HEALTH_PORT:8080`)                                                      |
-
 
 All RabbitMQ and storage variables from the extraction worker are also supported.
 
@@ -681,12 +663,10 @@ All RabbitMQ and storage variables from the extraction worker are also supported
 
 The workers, local public API, and web app communicate files through shared storage. Two backends are supported:
 
-
 | Backend | Use case                     | Configuration                                   |
 | ------- | ---------------------------- | ----------------------------------------------- |
 | `local` | Docker volumes, NFS mounts   | `STORAGE_TYPE=local`, `STORAGE_BASE_PATH=/data` |
-| `s3`    | S3-compatible object storage | `STORAGE_TYPE=s3`, `S3_`* env vars              |
-
+| `s3`    | S3-compatible object storage | `STORAGE_TYPE=s3`, `S3_`\* env vars             |
 
 ### Path Convention
 
@@ -721,39 +701,36 @@ Files use **time-partitioned, UUID-named paths** to prevent collisions and keep 
 
 All worker settings are environment variables. No config files. No CLI flags.
 
-
-| Variable                | Default           | Description                                                                                                                                           |
-| ----------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RABBITMQ_HOST`         | `rabbitmq`        | RabbitMQ hostname                                                                                                                                     |
-| `RABBITMQ_PORT`         | `5672`            | RabbitMQ port                                                                                                                                         |
-| `RABBITMQ_USER`         | `guest`           | RabbitMQ username                                                                                                                                     |
-| `RABBITMQ_PASSWORD`     | `guest`           | RabbitMQ password                                                                                                                                     |
-| `RABBITMQ_QUEUE`           | `docrunr.jobs`    | Input job queue name                                                                                                                                  |
-| `RABBITMQ_RESULT_QUEUE`    | `docrunr.results` | Result queue name                                                                                                                                     |
-| `RABBITMQ_DLQ_QUEUE`       | `docrunr.dlq`     | Dead-letter queue name for messages that fail after bounded retries                                                                                   |
-| `RABBITMQ_LIFECYCLE_QUEUE` | *(empty)*         | Optional lifecycle queue; Compose API overlay sets `docrunr.lifecycle`                                                                                |
-| `STORAGE_TYPE`          | `local`           | Storage backend: `local` or `s3`                                                                                                                      |
-| `STORAGE_BASE_PATH`     | `/data`           | Base path for local storage                                                                                                                           |
-| `S3_ENDPOINT`           | `http://seaweedfs:8333` | S3 endpoint URL (SeaweedFS, AWS S3, R2, MinIO, ...)                                                                                              |
-| `S3_ACCESS_KEY`         |                   | S3 access key                                                                                                                                         |
-| `S3_SECRET_KEY`         |                   | S3 secret key                                                                                                                                         |
-| `S3_BUCKET`             | `docrunr`         | S3 bucket name                                                                                                                                        |
-| `S3_REGION`             | `us-east-1`       | S3 region (dummy value is fine for SeaweedFS)                                                                                                         |
-| `JOB_TIMEOUT_SECONDS`   | `120`             | Per-job processing timeout                                                                                                                            |
-| `HEALTH_PORT`           | `8080`            | TXT worker health/dashboard HTTP port                                                                                                                 |
-| `LLM_HEALTH_PORT`       | `8081`            | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |
-| `SQLITE_BASE_PATH`      | `/db`             | Base path for SQLite worker UI persistence; worker stores DB at `<base>/<hostname>/docrunr.sqlite`                                                    |
-| `UI_PASSWORD`           | (empty)           | If non-empty, enables optional HTTP session auth (bundled UI uses a password form + cookie) for `/api/jobs`, `/api/artifact`, and `POST /api/uploads` |
-
+| Variable                   | Default                 | Description                                                                                                                                           |
+| -------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RABBITMQ_HOST`            | `rabbitmq`              | RabbitMQ hostname                                                                                                                                     |
+| `RABBITMQ_PORT`            | `5672`                  | RabbitMQ port                                                                                                                                         |
+| `RABBITMQ_USER`            | `guest`                 | RabbitMQ username                                                                                                                                     |
+| `RABBITMQ_PASSWORD`        | `guest`                 | RabbitMQ password                                                                                                                                     |
+| `RABBITMQ_QUEUE`           | `docrunr.jobs`          | Input job queue name                                                                                                                                  |
+| `RABBITMQ_RESULT_QUEUE`    | `docrunr.results`       | Result queue name                                                                                                                                     |
+| `RABBITMQ_DLQ_QUEUE`       | `docrunr.dlq`           | Dead-letter queue name for messages that fail after bounded retries                                                                                   |
+| `RABBITMQ_LIFECYCLE_QUEUE` | _(empty)_               | Optional lifecycle queue; Compose API overlay sets `docrunr.lifecycle`                                                                                |
+| `STORAGE_TYPE`             | `local`                 | Storage backend: `local` or `s3`                                                                                                                      |
+| `STORAGE_BASE_PATH`        | `/data`                 | Base path for local storage                                                                                                                           |
+| `S3_ENDPOINT`              | `http://seaweedfs:8333` | S3 endpoint URL (SeaweedFS, AWS S3, R2, MinIO, ...)                                                                                                   |
+| `S3_ACCESS_KEY`            |                         | S3 access key                                                                                                                                         |
+| `S3_SECRET_KEY`            |                         | S3 secret key                                                                                                                                         |
+| `S3_BUCKET`                | `docrunr`               | S3 bucket name                                                                                                                                        |
+| `S3_REGION`                | `us-east-1`             | S3 region (dummy value is fine for SeaweedFS)                                                                                                         |
+| `JOB_TIMEOUT_SECONDS`      | `120`                   | Per-job processing timeout                                                                                                                            |
+| `HEALTH_PORT`              | `8080`                  | TXT worker health/dashboard HTTP port                                                                                                                 |
+| `LLM_HEALTH_PORT`          | `8081`                  | Host port for `worker-llm` when using `docker-compose.llm.yml` (maps to container port **8080**)                                                      |
+| `SQLITE_BASE_PATH`         | `/db`                   | Base path for SQLite worker UI persistence; worker stores DB at `<base>/<hostname>/docrunr.sqlite`                                                    |
+| `UI_PASSWORD`              | (empty)                 | If non-empty, enables optional HTTP session auth (bundled UI uses a password form + cookie) for `/api/jobs`, `/api/artifact`, and `POST /api/uploads` |
 
 ---
 
 ## 23. Health and Stats
 
-The TXT extraction worker listens on `HEALTH_PORT` (default **8080** on the host in Compose). `worker-llm` uses the same **8080** listen port inside its container; Compose publishes it on `**LLM_HEALTH_PORT`** (default **8081**) on the host so both workers can run together. Each process exposes liveness checks, the bundled dashboard (`ui_dist`), and the JSON APIs below. The LLM worker does not implement `POST /api/uploads` (embeddings jobs are published to RabbitMQ, not via browser upload).
+The TXT extraction worker listens on `HEALTH_PORT` (default **8080** on the host in Compose). `worker-llm` uses the same **8080** listen port inside its container; Compose publishes it on `**LLM_HEALTH_PORT`** (default **8081\*\*) on the host so both workers can run together. Each process exposes liveness checks, the bundled dashboard (`ui_dist`), and the JSON APIs below. The LLM worker does not implement `POST /api/uploads` (embeddings jobs are published to RabbitMQ, not via browser upload).
 
 When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every HTTP route behaves as documented below. When `UI_PASSWORD` is set, the worker issues `HttpOnly` `SameSite=Lax` session cookies with an internal fixed TTL.
-
 
 | Endpoint                | Content-Type                          | Purpose                                                                                                                                          |
 | ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -767,7 +744,6 @@ When `UI_PASSWORD` is unset, behavior matches the open dashboard defaults: every
 | `POST /api/uploads`     | `application/json`                    | Multipart upload (`files` / `file` fields); optional query `priority=0..255` sets job and AMQP priority (default `0`; invalid values → HTTP 400) |
 | `GET /api/jobs`         | `application/json`                    | Persistent job list (`limit`, `status`, `search`); items include `priority`                                                                      |
 | `GET /api/artifact`     | `text/markdown` or `application/json` | Open output artifact by path (`output/...` with `.md` or `.json` suffix)                                                                         |
-
 
 ### GET /api/jobs
 
@@ -810,14 +786,14 @@ The health server uses Python's stdlib `http.server`. No framework. No external 
 
 ### Endpoints
 
-| Method | Path | Purpose |
-| ------ | ---- | ------- |
-| `POST` | `/api/v1/documents` | Multipart upload (`file`); optional form `llm_profile`; returns `201` |
-| `GET` | `/api/v1/jobs` | List jobs (`limit` 1..100 default 50, `offset`, `state`) |
-| `GET` | `/api/v1/jobs/{jobId}` | Job projection |
-| `GET` | `/api/v1/jobs/{jobId}/result` | Artifact download (`format`: `json`, `markdown`, or `embeddings`) |
-| `GET` | `/api/v1/llm/profiles` | LiteLLM profile names |
-| `GET` | `/health` | Liveness (`rabbitmq` ready flag; omitted from OpenAPI) |
+| Method | Path                          | Purpose                                                               |
+| ------ | ----------------------------- | --------------------------------------------------------------------- |
+| `POST` | `/api/v1/documents`           | Multipart upload (`file`); optional form `llm_profile`; returns `201` |
+| `GET`  | `/api/v1/jobs`                | List jobs (`limit` 1..100 default 50, `offset`, `state`)              |
+| `GET`  | `/api/v1/jobs/{jobId}`        | Job projection                                                        |
+| `GET`  | `/api/v1/jobs/{jobId}/result` | Artifact download (`format`: `json`, `markdown`, or `embeddings`)     |
+| `GET`  | `/api/v1/llm/profiles`        | LiteLLM profile names                                                 |
+| `GET`  | `/health`                     | Liveness (`rabbitmq` ready flag; omitted from OpenAPI)                |
 
 Public job states: `queued` → `processing` → `succeeded` / `failed`. Uploads currently publish AMQP `priority` `0` (RabbitMQ and the worker upload UI already accept `0..255`). Result endpoints return `409 JOB_NOT_READY` until the matching artifact path is projected.
 
@@ -833,14 +809,14 @@ Job projection fields: `job_id`, `state`, `file_name`, `file_size`, `content_typ
 
 `GET /health` returns `{ "status": "ok" or "degraded", "rabbitmq": <bool> }` with HTTP 503 when degraded.
 
-| HTTP | `error.code` | When |
-| ---- | ------------ | ---- |
-| 400 | `VALIDATION_ERROR` | Bad upload, unknown `llm_profile`, empty file |
-| 401 | `UNAUTHORIZED` | Missing or invalid Bearer token when `API_KEY` is set |
-| 404 | `NOT_FOUND` | Unknown `jobId` |
-| 409 | `JOB_NOT_READY` | Artifact not projected yet, or file missing from storage |
-| 413 | `PAYLOAD_TOO_LARGE` | Upload exceeds `API_MAX_UPLOAD_BYTES` |
-| 503 | `LITELLM_UNAVAILABLE` / `STORAGE_UNAVAILABLE` / `QUEUE_UNAVAILABLE` | Profile lookup, storage, or outbox publish failed |
+| HTTP | `error.code`                                                        | When                                                     |
+| ---- | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| 400  | `VALIDATION_ERROR`                                                  | Bad upload, unknown `llm_profile`, empty file            |
+| 401  | `UNAUTHORIZED`                                                      | Missing or invalid Bearer token when `API_KEY` is set    |
+| 404  | `NOT_FOUND`                                                         | Unknown `jobId`                                          |
+| 409  | `JOB_NOT_READY`                                                     | Artifact not projected yet, or file missing from storage |
+| 413  | `PAYLOAD_TOO_LARGE`                                                 | Upload exceeds `API_MAX_UPLOAD_BYTES`                    |
+| 503  | `LITELLM_UNAVAILABLE` / `STORAGE_UNAVAILABLE` / `QUEUE_UNAVAILABLE` | Profile lookup, storage, or outbox publish failed        |
 
 ### Flow
 
@@ -856,21 +832,20 @@ The API is the exclusive consumer of `docrunr.results`, `docrunr.llm.results`, a
 
 ### Configuration
 
-
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `API_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` in Compose) |
-| `API_PORT` | `8080` | Container listen port |
-| `DOCRUNR_API_PORT` | `8082` | Compose host port |
-| `API_KEY` | *(empty)* | Optional Bearer token |
-| `API_ALLOW_UNAUTHENTICATED_PUBLIC` | `false` | Required for public bind without `API_KEY` (Compose sets `true`) |
-| `API_DB_PATH` | `/db/docrunr-api.sqlite` | Job projection + outbox |
-| `API_MAX_UPLOAD_BYTES` | `104857600` | Upload size limit |
-| `RABBITMQ_LIFECYCLE_QUEUE` | `docrunr.lifecycle` | Lifecycle consume queue (API default) |
-| `LITELLM_BASE_URL` | *(empty)* | Profiles lookup; Compose sets `http://litellm:4000` |
-| `LITELLM_API_KEY` | *(empty)* | Forwarded to LiteLLM when listing profiles |
-| `LITELLM_TIMEOUT_SECONDS` | `10` | Timeout for LiteLLM profile lookup (API only; worker-llm uses 600) |
-| `LITELLM_PROFILES_CACHE_SECONDS` | `30` | Profile list cache TTL |
+| Variable                           | Default                  | Description                                                        |
+| ---------------------------------- | ------------------------ | ------------------------------------------------------------------ |
+| `API_HOST`                         | `127.0.0.1`              | Bind address (`0.0.0.0` in Compose)                                |
+| `API_PORT`                         | `8080`                   | Container listen port                                              |
+| `DOCRUNR_API_PORT`                 | `8082`                   | Compose host port                                                  |
+| `API_KEY`                          | _(empty)_                | Optional Bearer token                                              |
+| `API_ALLOW_UNAUTHENTICATED_PUBLIC` | `false`                  | Required for public bind without `API_KEY` (Compose sets `true`)   |
+| `API_DB_PATH`                      | `/db/docrunr-api.sqlite` | Job projection + outbox                                            |
+| `API_MAX_UPLOAD_BYTES`             | `104857600`              | Upload size limit                                                  |
+| `RABBITMQ_LIFECYCLE_QUEUE`         | `docrunr.lifecycle`      | Lifecycle consume queue (API default)                              |
+| `LITELLM_BASE_URL`                 | _(empty)_                | Profiles lookup; Compose sets `http://litellm:4000`                |
+| `LITELLM_API_KEY`                  | _(empty)_                | Forwarded to LiteLLM when listing profiles                         |
+| `LITELLM_TIMEOUT_SECONDS`          | `10`                     | Timeout for LiteLLM profile lookup (API only; worker-llm uses 600) |
+| `LITELLM_PROFILES_CACHE_SECONDS`   | `30`                     | Profile list cache TTL                                             |
 
 RabbitMQ and storage variables match the workers (section 22).
 

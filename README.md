@@ -3,7 +3,7 @@
   <img src="./ui/src/assets/logo-white.svg#gh-dark-mode-only" alt="DocRunr" width="100" />
 </p>
 
-<h3 align="center">Document to clean Markdown and chunks. That's it.</h3>
+<h3 align="center">Document to Markdown and chunks. That's it.</h3>
 
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License: Apache-2.0" /></a>
@@ -21,7 +21,7 @@ DocRunr supports a CLI for local and batch work, queue workers with an operator 
 ### ✨ **Highlights**
 
 - Binary file detection.
-- Clean Markdown and stable chunk JSON output.
+- Markdown and stable chunk JSON output.
 - Automatic parser fallback when extraction quality is weak.
 - Worker setup with queue processing, uploads, health, stats, and artifact inspection.
 - UI for uploads, jobs, and output review.
@@ -29,7 +29,7 @@ DocRunr supports a CLI for local and batch work, queue workers with an operator 
 
 ### 🎯 **Simple by design**
 
-DocRunr does one job: it turns messy documents into clean Markdown and structured chunks. PDFs, Office files, email, HTML, images with text.
+DocRunr does one job: it turns documents into Markdown and structured chunks. PDFs, Office files, email, HTML, images with text.
 
 DocRunr is built for general document handling, not for every possible document edge case. The goal is to make the common 80% of real world documents usable with a predictable pipeline, not to promise perfect conversion for every domain specific layout, template, or special use case. There will always be documents and use cases that need custom handling outside DocRunr.
 
@@ -44,7 +44,7 @@ flowchart LR
     A[Documents] --> B[RabbitMQ]
     B --> C[DocRunr]
     C --> B
-    C --> D["📝 Clean Markdown (.md)"]
+    C --> D["📝 Markdown (.md)"]
     C --> E["🧩 Structured chunks (.json)"]
 ```
 
