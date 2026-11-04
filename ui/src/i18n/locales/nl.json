@@ -121,7 +121,7 @@
   "tooltip.processed_one": "{{count}} verwerkt",
   "tooltip.processed_other": "{{count}} verwerkt",
   "about.logoAria": "DocRunr-logo",
-  "about.description": "DocRunr zet documenten om in schone Markdown en gestructureerde chunks voor RAG-pipelines. Bewust simpel gehouden, zodat jij geen eigen conversiestack hoeft te bouwen of te onderhouden.",
+  "about.description": "DocRunr zet documenten om in Markdown en gestructureerde chunks voor RAG-pipelines. Bewust simpel gehouden, zodat jij geen eigen conversiestack hoeft te bouwen of te onderhouden.",
   "about.version": "Versie {{version}}",
   "about.githubLink": "DocRunr op GitHub",
   "about.xLink": "DocRunr op X",

@@ -121,7 +121,7 @@
   "tooltip.processed_one": "{{count}} processed",
   "tooltip.processed_other": "{{count}} processed",
   "about.logoAria": "DocRunr logo",
-  "about.description": "DocRunr turns documents into clean Markdown and structured chunks for RAG pipelines. We kept it simple on purpose so you don't have to own the messy parts of document conversion.",
+  "about.description": "DocRunr turns documents into Markdown and structured chunks for RAG pipelines. We kept it simple on purpose so you don't have to own the messy parts of document conversion.",
   "about.version": "Version {{version}}",
   "about.githubLink": "DocRunr on GitHub",
   "about.xLink": "DocRunr on X",
