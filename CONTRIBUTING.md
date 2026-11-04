@@ -9,6 +9,7 @@ This guide keeps contributions simple, consistent, and easy to review.
 - Keep pull requests focused and small when possible.
 - Prefer clarity over cleverness in code and docs.
 - Add or update tests for behavioral changes.
+- Agent guidance: [AGENTS.md](./AGENTS.md).
 
 ## Repository structure
 
