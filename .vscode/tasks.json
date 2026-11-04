@@ -288,11 +288,10 @@
       "label": "release",
       "type": "shell",
       "command": "make",
-      "args": ["release", "VERSION='${input:releaseVersion}'"],
+      "args": ["release"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "group": "build",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -338,12 +337,6 @@
       "type": "promptString",
       "description": "Number of documents to download per mimetype.",
       "default": "5"
-    },
-    {
-      "id": "releaseVersion",
-      "type": "promptString",
-      "description": "Version X.Y.Z, or leave empty for automatic patch bump (recommended in VS Code tasks).",
-      "default": ""
     },
     {
       "id": "dockerBuildTarget",

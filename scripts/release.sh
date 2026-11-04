@@ -19,8 +19,8 @@ Behavior:
   - Requires clean working tree
   - Updates version fields in workspace/API/runtime/core/workers/UI manifests and the OpenAPI snapshot
   - Creates release commit `🚀 Release vX.Y.Z`
-  - If --version is omitted in a terminal session, prompts for a version with the next patch as default
-  - If --version is omitted non-interactively: first release is 0.0.1; otherwise patch-bump from latest vX.Y.Z
+  - If --version is omitted, prompts for a version with the next patch as default
+    (first release is 0.0.1). Pass --version to skip the prompt.
   - Creates annotated tag vX.Y.Z
   - With --push: pushes main before pushing the tag
   - Pushes tag when --push is provided
@@ -104,12 +104,8 @@ if [[ -z "$version" ]]; then
     suggested_version="${major}.${minor}.${patch}"
   fi
 
-  if [[ -t 0 ]]; then
-    read -r -p "Release version [${suggested_version}]: " prompted_version
-    version="${prompted_version:-$suggested_version}"
-  else
-    version="$suggested_version"
-  fi
+  read -r -p "Release version [${suggested_version}]: " prompted_version
+  version="${prompted_version:-$suggested_version}"
 fi
 
 version="${version#v}"

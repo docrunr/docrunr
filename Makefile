@@ -93,7 +93,7 @@ docker-build:
 
 release:
 ifeq ($(strip $(VERSION)),)
-	printf '\n' | ./scripts/release.sh --push
+	./scripts/release.sh --push
 else
 	./scripts/release.sh --version "$(VERSION)" --push
 endif
