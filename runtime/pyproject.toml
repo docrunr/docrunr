@@ -6,7 +6,7 @@ license = { text = "Apache-2.0" }
 requires-python = ">=3.11,<3.14"
 authors = [{ name = "DocRunr Contributors" }]
 dependencies = [
-    "boto3>=1.35",
+    "boto3>=1.43.121",
     "pika>=1.3",
 ]
 

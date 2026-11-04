@@ -11,7 +11,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic-settings>=2.0",
     "python-multipart>=0.0.32",
-    "uvicorn>=0.51.0",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]
